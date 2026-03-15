@@ -14,8 +14,6 @@
 TaskHandle_t timer_task_handle;
 bool running = false;
 
-PerfMonitor perf_adc, perf_imu, perf_ik, perf_i2c, perf_global;
-
 static bool IRAM_ATTR timer_on_alarm_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
 {
     BaseType_t high_task_awoken = pdFALSE;
@@ -26,6 +24,14 @@ static bool IRAM_ATTR timer_on_alarm_cb(gptimer_handle_t timer, const gptimer_al
 ControlLoop::ControlLoop()
     : initialized(false)
 {
+    kinematics_engine = KinematicsEngine(KinematicsEngine::KinematicsConfig{
+        .hip_shift_x = HIP_POS_X_M,
+        .hip_shift_y = HIP_POS_Y_M,
+        .hip_offset = HIP_OFFSET_M,
+        .length_thigh = LEG_THIGH_LENGTH_M,
+        .length_calf = LEG_CALF_LENGTH_M,
+        .leg_inverted = { true, false, true, false },
+    });
 }
 
 Error ControlLoop::init()
@@ -44,8 +50,6 @@ Error ControlLoop::init()
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
             control_loop->control_task();
-            perf_global.stop();
-            perf_global.start();
         }
 
         // clean up and delete task
@@ -157,10 +161,11 @@ Error ControlLoop::deinit()
     return Error::None;
 }
 
-uint32_t counter = 0;
-
 Error ControlLoop::control_task()
 {
+    // performance tracking
+    perf_controltask.start();
+
     static bool watchdog_active = false;
 
     /*** UPDATE CONTROL INTENT ***/
@@ -174,7 +179,7 @@ Error ControlLoop::control_task()
     {
         // Brain is overloaded or crashed. Force robot stop.
         intent.body_vel = Vec3f(0.f, 0.f, 0.f);
-        intent.gait = IPC::Gait::Idle;
+        intent.gait = GaitPlanner::GaitType::Walk;
 
         if (!watchdog_active) {
             Log::Add(Log::Level::Warning, TAG, "Control intent watchdog triggered. Stop overthinking!");
@@ -189,34 +194,61 @@ Error ControlLoop::control_task()
         }
     }
 
-    /*** 1 - READ ALL SENSORS ***/
+    /*** 1 - STATE ESTIMATION - READ ALL SENSORS ***/
 
-    // Read the ADC channels (motors feedback + feet contacts)
-    perf_adc.start();
-    AnalogDriver::ReadAllChannels();
-    perf_adc.stop();
+    // Read the ADC channels and IMU Data
+    if (Error err = AnalogDriver::ReadAllChannels(); err != Error::None)
+    {
+        Log::Add(Log::Level::Error, TAG, "Error reading all ADC channels");
+    }
+    if (Error err = IMUDriver::ReadData(); err != Error::None)
+    {
+        Log::Add(Log::Level::Error, TAG, "Error reading data from IMU");
+    }
 
-    // Read the IMU data
-    perf_imu.start();
-    IMUDriver::__ISRReadData();
-    perf_imu.stop();
+    // Estimate body state from new IMU and Analog data (calls Legs, Joint, IMU estimateState functions)
+    if (Error err = Robot::GetInstance().getBody().estimateState(CONTROL_LOOP_DT_S); err != Error::None)
+    {
+        Log::Add(Log::Level::Error, TAG, "Error estimating body state");
+    }
 
     /*** 2 - RUN CARTESIAN CONTROL (USING BRAIN CONTROL INTENT) ***/
 
-    // Movement planning
-    perf_ik.start();
+    // build the initial state
+    BodyCartesianState cartesian_state;
+    cartesian_state.body_pos = intent.body_pos;
+    cartesian_state.body_rot = intent.body_rot;
+    cartesian_state.legs[0].is_grounded = Robot::GetInstance().getBody().getFrontLeftLeg().isGrounded();
+    cartesian_state.legs[1].is_grounded = Robot::GetInstance().getBody().getFrontRightLeg().isGrounded();
+    cartesian_state.legs[2].is_grounded = Robot::GetInstance().getBody().getBackLeftLeg().isGrounded();
+    cartesian_state.legs[3].is_grounded = Robot::GetInstance().getBody().getBackRightLeg().isGrounded();
+
+    // Gait planner (ideal movement)
     if (new_intent)
     {
-        movement_planner.setVelocityCommand(intent.body_vel.x, intent.body_vel.y, intent.body_vel.z);
+        gait_planner.setVelocityCommand(intent.body_vel.x, intent.body_vel.y, intent.body_vel.z);
+        GaitPlanner::GaitConfig current_config = gait_planner.getConfig();
+        if (current_config.gait_type != intent.gait)
+        {
+            current_config.gait_type = intent.gait;
+            gait_planner.setGaitConfig(current_config);
+        }
     }
-    movement_planner.update();
+    gait_planner.update(CONTROL_LOOP_DT_S, cartesian_state);
 
-    // Animation override
-
+    // Animation override (breathing and all)
+    // TODO
 
     /*** 3 - CONVERT CARTESIAN CONTROL TO JOINT CONTROL ***/
 
+    BodyJointState joint_state;
+
     // IK
+    if (Error err = kinematics_engine.computeBodyIK(cartesian_state, joint_state); err != Error::None)
+    {
+        Log::Add(Log::Level::Error, TAG, "KinematicsEngine failed to calculate body IK");
+        return err;
+    }
 
 
     /*** 4 - RUN JOINT CONTROL (USING BRAIN CONTROL INTENT) ***/
@@ -227,38 +259,31 @@ Error ControlLoop::control_task()
     /*** 5 - SEND EVERYTHING ***/
 
     // Update the body (this updates all joints in the body)
-    if (Error err = Robot::GetInstance().getBody().update(); err != Error::None)
+    if (Error err = Robot::GetInstance().getBody().applyCommand(joint_state, CONTROL_LOOP_DT_S); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Body update failed in control task with error: %s", ErrorToString(err));
-        return err;
+        Log::Add(Log::Level::Error, TAG, "Failed to apply command in control task with error: %s", ErrorToString(err));
+        // return err;
     }
-    perf_ik.stop();
     
     // Send the new motor values
-    perf_i2c.start();
-    MotorDriver::__ISRSendValues();
-    perf_i2c.stop();
-
-    if (counter++ == CONTROL_LOOP_FREQ_HZ)
+    if (Error err = MotorDriver::SendData(); err != Error::None)
     {
-        counter = 0;
-        Log::Add(Log::Level::Info, TAG, 
-            "ADC: %.2f ms | IMU: %.2f ms | IK: %.2f ms | I2C: %.2f ms | Total: %.2f ms -- Global: %.2f ms", 
-            perf_adc.get_avg_ms(CONTROL_LOOP_FREQ_HZ),
-            perf_imu.get_avg_ms(CONTROL_LOOP_FREQ_HZ),
-            perf_ik.get_avg_ms(CONTROL_LOOP_FREQ_HZ),
-            perf_i2c.get_avg_ms(CONTROL_LOOP_FREQ_HZ),
-            (perf_adc.total_time + perf_imu.total_time + perf_ik.total_time + perf_i2c.total_time) / (CONTROL_LOOP_FREQ_HZ * 1000.0f),
-            perf_global.get_avg_ms(CONTROL_LOOP_FREQ_HZ)
-        );
-        perf_adc.reset(); perf_imu.reset(); perf_ik.reset(); perf_i2c.reset();
-        perf_global.reset();
+        Log::Add(Log::Level::Error, TAG, "Error sending MotorDriver data");
     }
-
 
     /*** 6 - OTHER CORE1 JOBS ***/
 
     // All done, we can execute pending jobs if there's any (Handle RPC Calls)
     RPC::Process_Core1();
+    
+    // Performance tracking (as lightweight as possible)
+    perf_controltask.stop();
+    if (perf_counter++ == CONTROL_LOOP_FREQ_HZ)
+    {
+        avg_ms = perf_controltask.get_avg_ms(CONTROL_LOOP_FREQ_HZ);
+        perf_controltask.reset();
+        perf_counter = 0;
+    }
+
     return Error::None;
 }

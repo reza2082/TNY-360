@@ -214,7 +214,7 @@ Error MotorController::getTargetPosition(float& result) const
 Error MotorController::getCurrentPosition(float& result) const
 {
     AnalogDriver::Value voltage_mV = 0;
-    if (Error err = AnalogDriver::GetVoltage(analog_channel, &voltage_mV); err != Error::None)
+    if (Error err = AnalogDriver::GetVoltage(analog_channel, voltage_mV); err != Error::None)
     {
         return err;
     }

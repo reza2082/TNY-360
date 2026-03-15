@@ -40,11 +40,11 @@ public:
 
     T lengthSq() const { return x * x + y * y + z * z; }
     
-    T length() const { return std::sqrt(lengthSq()); }
+    T length() const { return sqrtf(lengthSq()); }
 
     void rotateAround(const Vec3<T>& axis, T angle_rad) {
-        float cos_angle = std::cos(angle_rad);
-        float sin_angle = std::sin(angle_rad);
+        float cos_angle = cosf(angle_rad);
+        float sin_angle = sinf(angle_rad);
         Vec3<T> rotated = (*this * cos_angle) + (axis.cross(*this) * sin_angle) + (axis * (axis.dot(*this)) * (1 - cos_angle));
         x = rotated.x; y = rotated.y; z = rotated.z;
     }
@@ -137,12 +137,12 @@ class Quat
 {
 public:
     static Quat<T> FromEulerAngles(Vec3<T> angles) {
-        float cy = cos(angles.z * 0.5f);
-        float sy = sin(angles.z * 0.5f);
-        float cp = cos(angles.y * 0.5f);
-        float sp = sin(angles.y * 0.5f);
-        float cr = cos(angles.x * 0.5f);
-        float sr = sin(angles.x * 0.5f);
+        float cy = cosf(angles.z * 0.5f);
+        float sy = sinf(angles.z * 0.5f);
+        float cp = cosf(angles.y * 0.5f);
+        float sp = sinf(angles.y * 0.5f);
+        float cr = cosf(angles.x * 0.5f);
+        float sr = sinf(angles.x * 0.5f);
 
         Quat<T> q;
         q.w = cr * cp * cy + sr * sp * sy;
@@ -195,7 +195,7 @@ public:
     }
 
     void normalize() {
-        T len = std::sqrt(w*w + x*x + y*y + z*z);
+        T len = sqrtf(w*w + x*x + y*y + z*z);
         if (len > 0) {
             w /= len; x /= len; y /= len; z /= len;
         }

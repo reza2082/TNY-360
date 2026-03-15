@@ -25,7 +25,7 @@ namespace AnalogDriver
     * @param outRawValue Pointer to store the raw value.
     * @return Error code indicating success or failure.
     */
-    Error GetVoltage(Channel id, Value* outVoltage_mV);
+    Error GetVoltage(Channel id, Value& outVoltage_mV);
 
     /**
     * @brief Gets all analog input voltages.

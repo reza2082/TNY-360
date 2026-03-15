@@ -1,6 +1,7 @@
 #pragma once
 #include "common/utils.hpp"
 #include "common/geometry.hpp"
+#include "locomotion/GaitPlanner.hpp"
 
 namespace IPC
 {
@@ -12,15 +13,6 @@ namespace IPC
         None,      // No override
         Absolute,  // Replace the IK result with the given angle
         Relative,  // Add the given angle to the IK result
-    };
-
-    enum class Gait {
-        Idle,   // No movement
-        Spread, // Two legs at a time (X pattern), legs spread
-        Creep,  // One leg at a time (safe)
-        Walk,   // Two legs at a time (X pattern)
-        Run,    // Two legs at a time (front vs back)
-        Jump    // Four legs in the air
     };
     
     struct JointOverride {
@@ -43,7 +35,7 @@ namespace IPC
         uint32_t timestamp_ms; // timestamp for safeguard watchdog
 
         // movement planning infos
-        Gait gait;
+        GaitPlanner::GaitType gait;
         Vec3f body_vel;
         Vec3f body_rot;
         Vec3f body_pos;

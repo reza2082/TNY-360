@@ -65,16 +65,12 @@ void app_main()
     Joint::ClampVelocity(0.5f); // rad/s
 
     Transformf stand_position{
-        Vec3f{0.f, 0.f, DEFAULT_BODY_HEIGHT_MM},
+        Vec3f{0.f, 0.f, DEFAULT_BODY_HEIGHT_M},
         Quatf{}
     };
-    if (Error err = robot.getBody().setPosture(stand_position); err != Error::None)
-    {
-        Log::Add(Log::Level::Error, TAG, "Failed to set body target position. Error: %s", ErrorToString(err));
-        return;
-    }
-    robot.getBody().getLeftEar().setTarget(DEG_TO_RAD(45.f));
-    robot.getBody().getRightEar().setTarget(DEG_TO_RAD(45.f));
+    Robot::GetInstance().getDecisionLoop().setBodyTransform(stand_position);
+    robot.getBody().getLeftEar().applyCommand(DEG_TO_RAD(45.f), 0); // TODO : Use joint override
+    robot.getBody().getRightEar().applyCommand(DEG_TO_RAD(45.f), 0); // TODO : Use joint override
 
     // wait a bit for the robot to stand up
     vTaskDelay(pdMS_TO_TICKS(4000));

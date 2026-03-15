@@ -17,7 +17,8 @@ export class RobotError extends Error {
 type HandlerFunction = (...args: any[]) => void;
 interface RequestHandler {
     outputTypes: Type[];
-    handler: HandlerFunction;
+    resolve: HandlerFunction;
+    reject: HandlerFunction;
 }
 
 const lastResponseTimes: number[] = [];
@@ -95,7 +96,13 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
                 console.warn(`No pending request for random ID: ${randomId}`);
                 return;
             }
-            const { outputTypes, handler } = requestEntry;
+            const { outputTypes, resolve, reject } = requestEntry;
+
+            if (status !== 1) { // Not ok ? Trigger reject
+                reject(status);
+                return;
+            }
+
             const expectedOutputSize = sizeof(outputTypes);
             if (msg.size - 4 < expectedOutputSize) {
                 console.warn(`Insufficient data for command [random] ID ${randomId}: expected ${expectedOutputSize}, got ${msg.size - 1}`);
@@ -124,7 +131,7 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
                 offset += sizeof(type);
             }
 
-            handler(...outputs);
+            resolve(...outputs);
             this.pendingRequests.delete(randomId);
         });
         this.socket.addEventListener('error', (event) => {
@@ -220,9 +227,14 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
                 this.pendingRequests.delete(randomId);
                 reject(new TimeoutError());
             }, 2000);
-            this.pendingRequests.set(randomId, { outputTypes, handler: (...outputs: any[]) => {
+            this.pendingRequests.set(randomId, { outputTypes, resolve: (...args: any[]) => {
                 clearTimeout(timeoutId);
-                resolve(outputs);
+                resolve(args);
+                const endTime = Date.now();
+                onResponseTime(endTime - startTime);
+            }, reject: (...args: any[]) => {
+                clearTimeout(timeoutId);
+                reject(args);
                 const endTime = Date.now();
                 onResponseTime(endTime - startTime);
             }});

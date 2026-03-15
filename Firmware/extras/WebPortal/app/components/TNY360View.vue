@@ -94,29 +94,31 @@ watchEffect(() => {
   }
 });
 
+const jointIndices = [7, 5, 6, 4, 2, 3, 10, 8, 9, 13, 11, 12];
 const jointAngles = ref<number[]>(Array(12).fill(0));
 const bodyOrientation = ref<THREE.Quaternion>(new THREE.Quaternion());
 let pollingInterval: number | null = null;
 onMounted(() => {
-    pollingInterval = setInterval(() => {
-        remote.getAllJointAngles().then((angles) => {
-            jointAngles.value = angles;
-        }).catch((err) => {});
+    pollingInterval = setInterval(async () => {
+        for (let i = 0; i < jointAngles.value.length; i++) {
+            try {
+                jointAngles.value[i] = await remote.getJointFeedbackAngle(jointIndices[i] ?? 0);
+            } catch (err) {}
+        }
 
-        setTimeout(() => {
-            remote.getBodyOrientation().then((orientation) => {
-                if (model.value) {
-                    const quat = new THREE.Quaternion(
-                        orientation.x,
-                        orientation.y,
-                        orientation.z,
-                        orientation.w
-                    ).normalize();
-                    bodyOrientation.value = quat;
-                }
-            }).catch((err) => {});
-        }, 50);
-    }, 100);
+        try {
+            const orientation = await remote.getBodyOrientation();
+            if (model.value) {
+                const quat = new THREE.Quaternion(
+                    orientation.x,
+                    orientation.y,
+                    orientation.z,
+                    orientation.w
+                ).normalize();
+                bodyOrientation.value = quat;
+            }
+        } catch (err) {}
+    }, 500);
 });
 
 onUnmounted(() => {

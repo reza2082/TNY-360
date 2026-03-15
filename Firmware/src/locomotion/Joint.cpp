@@ -5,13 +5,13 @@
 Joint* Joint::joints[JOINT_COUNT] = { nullptr }; // Static array to hold Joint instances
 float Joint::joint_velocity_clamp_rad_s = Joint::MAX_VELOCITY_RAD_S; // Initialize static max velocity variable
 
-Joint* Joint::GetJoint(MotorDriver::Channel motor_channel)
+Joint* Joint::GetJoint(uint8_t id)
 {
-    if (motor_channel >= JOINT_COUNT)
+    if (id >= JOINT_COUNT)
     {
         return nullptr;
     }
-    return joints[motor_channel];
+    return joints[id];
 }
 
 Error Joint::ClampVelocity(float max_velocity_rad_s)
@@ -33,8 +33,8 @@ Error Joint::ClampVelocity(float max_velocity_rad_s)
 
 Joint::Joint() {}
 
-Joint::Joint(MotorController motor_controller, float min_angle_rad, float max_angle_rad, bool inverted, bool has_feedback)
-    : motor_controller(motor_controller), min_angle_rad(min_angle_rad), max_angle_rad(max_angle_rad),
+Joint::Joint(uint8_t id, MotorController motor_controller, float min_angle_rad, float max_angle_rad, bool inverted, bool has_feedback)
+    : id(id), motor_controller(motor_controller), min_angle_rad(min_angle_rad), max_angle_rad(max_angle_rad),
       inverted(inverted), velocity_rad_s(MAX_VELOCITY_RAD_S), has_feedback(has_feedback)
 {
 }
@@ -42,11 +42,8 @@ Joint::Joint(MotorController motor_controller, float min_angle_rad, float max_an
 Error Joint::init()
 {
     // Register this joint instance
-    MotorDriver::Channel channel = motor_controller.getMotorChannel();
-    if (channel < JOINT_COUNT)
-    {
-        joints[channel] = this;
-    }
+    joints[id] = this;
+
     // NOTE : Don't move this in the constructor, as we can have copy/move operations in constructors arguments (yes, that will be horrible to debug)
 
     if (Error err = motor_controller.init(); err != Error::None)
@@ -70,10 +67,7 @@ Error Joint::init()
         estimate_angle_rad = model_angle_rad;
 
         // Set the target angle to the current position
-        if (Error err = setTarget(model_angle_rad); err != Error::None)
-        {
-            return err;
-        }
+        target_angle_rad = model_angle_rad;
 
         // Initialize Kalman filter
         constexpr float SENSOR_NOISE_VARIANCE = 1.f;
@@ -101,29 +95,8 @@ Error Joint::deinit()
     return motor_controller.deinit();
 }
 
-Error Joint::update()
+Error Joint::estimateState(float dt)
 {
-    float clamped_velocity_rad_s = std::min(velocity_rad_s, joint_velocity_clamp_rad_s);
-
-    // Update model angle based on velocity and target
-    float last_model_angle_rad = model_angle_rad;
-    if (target_angle_rad > model_angle_rad)
-    {
-        model_angle_rad += clamped_velocity_rad_s * CONTROL_LOOP_DT_S;
-        if (model_angle_rad > target_angle_rad)
-        {
-            model_angle_rad = target_angle_rad;
-        }
-    }
-    else if (target_angle_rad < model_angle_rad)
-    {
-        model_angle_rad -= clamped_velocity_rad_s * CONTROL_LOOP_DT_S;
-        if (model_angle_rad < target_angle_rad)
-        {
-            model_angle_rad = target_angle_rad;
-        }
-    }
-
     if (has_feedback)
     {
         // Get the raw feedback from the motor controller
@@ -133,7 +106,6 @@ Error Joint::update()
         }
 
         // Update the Kalman filter
-        kalman_filter.Predict(model_angle_rad - last_model_angle_rad);
         estimate_angle_rad = kalman_filter.Update(feedback_angle_rad);
     }
     else // no feedback, use model as feedback and estimation
@@ -142,13 +114,61 @@ Error Joint::update()
         estimate_angle_rad = model_angle_rad;
     }
 
+    return Error::None;
+}
+
+Error Joint::applyCommand(float joint_angle_rad, float dt)
+{
+    if (joint_angle_rad < min_angle_rad || joint_angle_rad > max_angle_rad)
+    {
+        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested target angle %.2f rad is out of bounds (%.2f - %.2f rad)", id, joint_angle_rad, min_angle_rad, max_angle_rad);
+        return Error::InvalidParameters;
+    }
+    target_angle_rad = joint_angle_rad;
+
+    float clamped_velocity_rad_s = std::min(velocity_rad_s, joint_velocity_clamp_rad_s);
+
+    // Update model angle based on velocity and target
+    float last_model_angle_rad = model_angle_rad;
+    if (joint_angle_rad > model_angle_rad)
+    {
+        model_angle_rad += clamped_velocity_rad_s * CONTROL_LOOP_DT_S;
+        if (model_angle_rad > joint_angle_rad)
+        {
+            model_angle_rad = joint_angle_rad;
+        }
+    }
+    else if (joint_angle_rad < model_angle_rad)
+    {
+        model_angle_rad -= clamped_velocity_rad_s * CONTROL_LOOP_DT_S;
+        if (model_angle_rad < joint_angle_rad)
+        {
+            model_angle_rad = joint_angle_rad;
+        }
+    }
+
+    // If no feedback, enable the motor now (see enable() notes for more info).
+    if (!has_feedback && motor_controller.getState() == MotorController::State::DISABLED)
+    {
+        model_angle_rad = joint_angle_rad;
+        feedback_angle_rad = model_angle_rad;
+        estimate_angle_rad = model_angle_rad;
+        motor_controller.enable();
+    }
+
+    // If feedback, indicate command to kalman filter
+    if (has_feedback)
+    {
+        kalman_filter.Predict(model_angle_rad - last_model_angle_rad);
+    }
+
     // Move the motor at the desired position
     // NOTE : We could maybe improve this by moving the motor a bit ahead (to catch up with the control loop delay)
     if (Error err = send_motorcontroller_position(model_angle_rad); err != Error::None)
     {
         return err;
     }
-
+    
     return Error::None;
 }
 
@@ -195,7 +215,7 @@ Error Joint::setVelocity(float velocity_rad_s)
     // clamp velocity to allowed range
     if (velocity_rad_s < 0.f || velocity_rad_s > MAX_VELOCITY_RAD_S)
     {
-        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested velocity %.2f rad/s is out of bounds (0 - %.2f rad/s)", motor_controller.getMotorChannel(), velocity_rad_s, MAX_VELOCITY_RAD_S);
+        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested velocity %.2f rad/s is out of bounds (0 - %.2f rad/s)", id, velocity_rad_s, MAX_VELOCITY_RAD_S);
         return Error::InvalidParameters;
     }
     
@@ -209,53 +229,9 @@ Error Joint::getVelocity(float &result) const
     return Error::None;
 }
 
-Error Joint::setTarget(float angle_rad)
-{
-    if (angle_rad < min_angle_rad || angle_rad > max_angle_rad)
-    {
-        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested target angle %.2f rad is out of bounds (%.2f - %.2f rad)", motor_controller.getMotorChannel(), angle_rad, min_angle_rad, max_angle_rad);
-        return Error::InvalidParameters;
-    }
-
-    setVelocity(MAX_VELOCITY_RAD_S); // reset to max velocity for normal setTarget calls
-
-    if (!has_feedback && motor_controller.getState() == MotorController::State::DISABLED) // If no feedback, enable the motor now (see enable() notes for more info).
-    {
-        model_angle_rad = angle_rad;
-        feedback_angle_rad = model_angle_rad;
-        estimate_angle_rad = model_angle_rad;
-        motor_controller.enable();
-    }
-
-    target_angle_rad = angle_rad;
-    return Error::None;
-}
-
 Error Joint::getTarget(float &result) const
 {
     result = target_angle_rad;
-    return Error::None;
-}
-
-Error Joint::setTarget_Timed(float angle_rad, float time_s)
-{
-    if (angle_rad < min_angle_rad || angle_rad > max_angle_rad)
-    {
-        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested target angle %.2f rad is out of bounds (%.2f - %.2f rad)", motor_controller.getMotorChannel(), angle_rad, min_angle_rad, max_angle_rad);
-        return Error::InvalidParameters;
-    }
-
-    // calculate and set required velocity
-    float distance_rad = std::abs(angle_rad - model_angle_rad);
-    float required_velocity = distance_rad / time_s;
-
-    if (Error err = setVelocity(required_velocity); err != Error::None)
-    {
-        return err;
-    }
-
-    // set the target angle
-    target_angle_rad = angle_rad;
     return Error::None;
 }
 
@@ -281,13 +257,6 @@ Error Joint::getUncertainty(float &result) const
 {
     result = kalman_filter.GetUncertainty();
     return Error::None;
-}
-
-float Joint::getTimeEstimate(float target_angle_rad) const
-{
-    float distance_rad = std::abs(target_angle_rad - model_angle_rad);
-    float time_s = distance_rad / MAX_VELOCITY_RAD_S;
-    return time_s;
 }
 
 

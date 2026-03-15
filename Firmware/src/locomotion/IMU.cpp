@@ -27,7 +27,7 @@ Error IMU::deinit()
     return Error::None;
 }
 
-Error IMU::update()
+Error IMU::estimateState(float dt)
 {
     // Get the data
     IMUDriver::IMUData& data = IMUDriver::GetData();
@@ -37,10 +37,11 @@ Error IMU::update()
     // first rotate downvector by gyro rates
     Vec3f rotated_downVector = downVector;
     Quatf q_gyro = Quatf::FromEulerAngles(Vec3f(
-        DEG_TO_RAD(-data.gyro_x_ds) * CONTROL_LOOP_DT_S,
-        DEG_TO_RAD(-data.gyro_y_ds) * CONTROL_LOOP_DT_S,
-        DEG_TO_RAD(-data.gyro_z_ds) * CONTROL_LOOP_DT_S
-    )); // FIXME : Doing it like this tends to create really small values (numerical instability). Investigate to see if it causes problems (visualization shows really big delay and slow reaction time)
+        DEG_TO_RAD(-data.gyro_x_ds) * dt,
+        DEG_TO_RAD(-data.gyro_y_ds) * dt,
+        DEG_TO_RAD(-data.gyro_z_ds) * dt
+    )); // FIXME : Doing it like this tends to create really small values (numerical instability).
+        // Investigate to see if it causes problems (visualization shows really big delay and slow reaction time)
     rotated_downVector = q_gyro.rotate(rotated_downVector);
 
     // fuse with accelerometer
@@ -48,12 +49,10 @@ Error IMU::update()
     Vec3f accel_vector = Vec3f(data.accel_x_g, data.accel_y_g, data.accel_z_g).normalized();
     downVector = (rotated_downVector * alpha + accel_vector * (1.0f - alpha)).normalized();
 
-    // update orientation quaternion
-    float roll = atan2f(downVector.y, downVector.z);
-    float pitch = atan2f(-downVector.x, sqrtf(downVector.y * downVector.y + downVector.z * downVector.z));
-    
-    orientation = Quatf::FromEulerAngles(Vec3f(-roll, 0.0f, pitch)); // FIXME : Dirty fix to make the THREEJS visualization correct, but the robot is z-up right-handed, not y-up left-handed !! Conversion should be done on the website instead !
-    orientation.normalize();
+    // update orientation
+    orientation.x = atan2f(downVector.y, downVector.z);
+    orientation.y = atan2f(-downVector.x, sqrtf(downVector.y * downVector.y + downVector.z * downVector.z));
+    orientation.z = 0.0f;
 
     return Error::None;
 }

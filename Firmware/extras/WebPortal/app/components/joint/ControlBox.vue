@@ -126,7 +126,7 @@ onMounted(async () => {
             calibrationState.value = await remote.getJointCalibrationState(props.index);
             counter = 0;
         }
-    }, 200);
+    }, 500);
 });
 
 onUnmounted(() => {

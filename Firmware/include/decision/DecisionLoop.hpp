@@ -37,6 +37,12 @@ public:
     void setBodyVelocity(Vec3f vel);
 
     /**
+     * @brief Set the body transform
+     * @note THIS IS TEMPORARY. PROPER API SHOULD COME SOON
+     */
+    void setBodyTransform(Transformf transform);
+
+    /**
      * @brief Internal task for the main decision loop
      * @note SHOULDN'T BE CALLED
      */

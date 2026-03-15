@@ -132,25 +132,18 @@ namespace MotorDriver
         memset(pwm_buffer, 0, sizeof(pwm_buffer));
 
         // this is generally called when something bad happened, so we send the values immediately
-        __ISRSendValues();
+        SendData();
 
         return Error::None;
     }
     
-    void __ISRSendValues()
+    Error SendData()
     {
-        // for (int i = 0; i < static_cast<int>(CHANNEL_COUNT); i++)
-        // {
-        //     if (pca9685_set_pwm(pca_handle, i, pwm_buffer[i]) != ESP_OK)
-        //     {
-        //         Log::Add(Log::Level::Error, TAG, "Failed to set PWM for motor %d", i);
-        //     }
-        // }
-
         if (pca9685_set_pwms(pca_handle, pwm_buffer) != ESP_OK)
         {
             Log::Add(Log::Level::Error, TAG, "Failed to set PWM values");
+            return Error::HardwareFailure;
         }
-        // TODO : We should use the above function once it's fixed in the PCA9685 driver
+        return Error::None;
     }
 }

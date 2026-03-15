@@ -1,11 +1,13 @@
 #include "locomotion/Leg.hpp"
 #include "common/Log.hpp"
+#include "common/config.hpp"
 
 Leg::Leg() {}
 
-Leg::Leg(Joint hip_roll, Joint hip_pitch, Joint knee_pitch, bool y_inverted)
-    : hip_roll(hip_roll), hip_pitch(hip_pitch), knee_pitch(knee_pitch), y_inverted(y_inverted)
+Leg::Leg(Joint hip_roll, Joint hip_pitch, Joint knee_pitch, AnalogDriver::Channel contact_channel, bool y_inverted)
+    : hip_roll(hip_roll), hip_pitch(hip_pitch), knee_pitch(knee_pitch), contact_channel(contact_channel), y_inverted(y_inverted)
 {
+    grounded = true; // by default on the ground
 }
 
 Error Leg::init()
@@ -46,19 +48,49 @@ Error Leg::deinit()
     return Error::None;
 }
 
-Error Leg::update()
+Error Leg::estimateState(float dt)
 {
     Error err;
 
-    if ((err = hip_roll.update()) != Error::None)
+    // Check if grounded
+    AnalogDriver::Value voltage;
+    if (Error err = AnalogDriver::GetVoltage(this->contact_channel, voltage); err != Error::None)
     {
         return err;
     }
-    if ((err = hip_pitch.update()) != Error::None)
+    grounded = voltage > LEG_GROUNDED_THRESHOLD_MV;
+
+    // pass the call to all motors
+    if ((err = hip_roll.estimateState(dt)) != Error::None)
     {
         return err;
     }
-    if ((err = knee_pitch.update()) != Error::None)
+    if ((err = hip_pitch.estimateState(dt)) != Error::None)
+    {
+        return err;
+    }
+    if ((err = knee_pitch.estimateState(dt)) != Error::None)
+    {
+        return err;
+    }
+
+    return Error::None;
+}
+
+Error Leg::applyCommand(LegJointState jointState, float dt)
+{
+    Error err;
+
+    // pass the call to all motors
+    if ((err = hip_roll.applyCommand(jointState.hipRoll_rad, dt)) != Error::None)
+    {
+        return err;
+    }
+    if ((err = hip_pitch.applyCommand(jointState.hipPitch_rad, dt)) != Error::None)
+    {
+        return err;
+    }
+    if ((err = knee_pitch.applyCommand(jointState.kneePitch_rad, dt)) != Error::None)
     {
         return err;
     }
@@ -70,6 +102,7 @@ Error Leg::enable()
 {
     Error err;
 
+    // pass the call to all motors
     if ((err = hip_roll.enable()) != Error::None)
     {
         return err;
@@ -89,6 +122,7 @@ Error Leg::disable()
 {
     Error err;
 
+    // pass the call to all motors
     if ((err = hip_roll.disable()) != Error::None)
     {
         return err;
@@ -102,95 +136,4 @@ Error Leg::disable()
         return err;
     }
     return Error::None;
-}
-
-Error Leg::setTarget(const Vec3f& target_pos)
-{
-    // calculate IK angles
-    LegAngles angles;
-    if (Error err = calculate_ik_angles(target_pos, angles); err != Error::None)
-    {
-        return err;
-    }
-
-    float time_estimate_s = getTimeEstimate(target_pos);
-
-    // set the joint targets with the same time to reach
-    if (Error err = hip_roll.setTarget_Timed(angles.hip_roll, time_estimate_s); err != Error::None)
-    {
-        return err;
-    }
-    if (Error err = hip_pitch.setTarget_Timed(angles.hip_pitch, time_estimate_s); err != Error::None)
-    {
-        return err;
-    }
-    if (Error err = knee_pitch.setTarget_Timed(angles.knee_pitch, time_estimate_s); err != Error::None)
-    {
-        return err;
-    }
-
-    return Error::None;
-}
-
-Error Leg::setTarget_Timed(const Vec3f& target_pos, float time_s)
-{
-    // calculate IK angles
-    LegAngles angles;
-    if (Error err = calculate_ik_angles(target_pos, angles); err != Error::None)
-    {
-        return err;
-    }
-
-    // set the joint targets with the same time to reach
-    if (Error err = hip_roll.setTarget_Timed(angles.hip_roll, time_s); err != Error::None)
-    {
-        return err;
-    }
-    if (Error err = hip_pitch.setTarget_Timed(angles.hip_pitch, time_s); err != Error::None)
-    {
-        return err;
-    }
-    if (Error err = knee_pitch.setTarget_Timed(angles.knee_pitch, time_s); err != Error::None)
-    {
-        return err;
-    }
-
-    return Error::None;
-}
-
-float Leg::getTimeEstimate(const Vec3f& target_pos) const
-{
-    LegAngles angles;
-    if (Error err = calculate_ik_angles(target_pos, angles); err != Error::None)
-    {
-        return -1.f;
-    }
-
-    float time_hip_roll = hip_roll.getTimeEstimate(angles.hip_roll);
-    float time_hip_pitch = hip_pitch.getTimeEstimate(angles.hip_pitch);
-    float time_knee_pitch = knee_pitch.getTimeEstimate(angles.knee_pitch);
-
-    if (time_hip_roll < 0.f || time_hip_pitch < 0.f || time_knee_pitch < 0.f)
-    {
-        return -1.f;
-    }
-
-    return std::max(time_hip_roll, std::max(time_hip_pitch, time_knee_pitch));
-}
-
-Error Leg::calculate_ik_angles(const Vec3f& target_pos, LegAngles& angles) const
-{
-    LegGeometry geo = { // mm
-        .hip_offset = HIP_OFFSET_MM,
-        .length_thigh = LEG_THIGH_LENGTH_MM,
-        .length_calf = LEG_CALF_LENGTH_MM
-    };
-    
-    Vec3f adjusted_target = target_pos;
-    if (y_inverted)
-    {
-        adjusted_target.y = -adjusted_target.y;
-    }
-
-    return computeIK(adjusted_target, geo, angles);
 }

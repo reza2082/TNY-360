@@ -26,7 +26,7 @@ public:
 
     Joint();
 
-    Joint(MotorController motor_controller, float min_angle_rad = 0.f, float max_angle_rad = TWO_PI, bool inverted = false, bool has_feedback = true);
+    Joint(uint8_t id, MotorController motor_controller, float min_angle_rad = 0.f, float max_angle_rad = TWO_PI, bool inverted = false, bool has_feedback = true);
 
     /**
      * @brief Initialize the joint.
@@ -41,11 +41,18 @@ public:
     Error deinit();
 
     /**
-     * @brief Update the joint state.
+     * @brief Estimate the joint state.
      * @note This method should not be called manually, it is called internally in the control loop.
      * @return Error code indicating success or failure.
      */
-    Error update();
+    Error estimateState(float dt);
+
+    /**
+     * @brief Apply a new command to the joint.
+     * @note This method should not be called manually, it is called internally in the control loop.
+     * @return Error code indicating success or failure.
+     */
+    Error applyCommand(float joint_angle_rad, float dt);
 
     /**
      * @brief Enable the joint (motor).
@@ -82,27 +89,11 @@ public:
     Error getVelocity(float &result) const;
 
     /**
-     * @brief Set the target angle for the joint.
-     * @param angle_rad Target angle in radians.
-     * @return Error code indicating success or failure.
-     * @note If no feedback, calling this method will enable the motor.
-     */
-    Error setTarget(float angle_rad);
-
-    /**
      * @brief Get the target angle of the joint.
      * @param result Target angle in radians.
      * @return Error code indicating success or failure.
      */
     Error getTarget(float &result) const;
-
-    /**
-     * @brief Set the target angle for the joint with a specified time to reach it.
-     * @param angle_rad Target angle in radians.
-     * @param time_s Time in seconds to reach the target.
-     * @return Error code indicating success or failure.
-     */
-    Error setTarget_Timed(float angle_rad, float time_s);
 
     /**
      * @brief Get the current position of the joint.
@@ -152,6 +143,7 @@ private:
     static Joint* joints[JOINT_COUNT]; // static array of all joints (index is motor channel)
     static float joint_velocity_clamp_rad_s; // static variable for global maximum joint velocity
 
+    uint8_t id;
     MotorController motor_controller;
     KalmanFilter1D kalman_filter;
     float min_angle_rad;

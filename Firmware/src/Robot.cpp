@@ -36,6 +36,12 @@ Error Robot::init()
         return err;
     }
 
+    // Initialize the control loop
+    if (Error err = control_loop.init(); err != Error::None)
+    {
+        return err;
+    }
+
     return Error::None;
 }
 
@@ -48,7 +54,7 @@ Error Robot::start()
     }
 
     // Start the control loop
-    if (Error err = body.getControlLoop().start(); err != Error::None)
+    if (Error err = control_loop.start(); err != Error::None)
     {
         return err;
     }
@@ -64,7 +70,7 @@ Error Robot::start()
 Error Robot::stop()
 {
     // Stop the control loop
-    if (Error err = body.getControlLoop().stop(); err != Error::None)
+    if (Error err = control_loop.stop(); err != Error::None)
     {
         return err;
     }
@@ -80,6 +86,12 @@ Error Robot::stop()
 
 Error Robot::deinit()
 {
+    // Deinitialize the control loop
+    if (Error err = control_loop.init(); err != Error::None)
+    {
+        return err;
+    }
+
     // Deinitialize the decision loop
     if (Error err = decision_loop.deinit(); err != Error::None)
     {

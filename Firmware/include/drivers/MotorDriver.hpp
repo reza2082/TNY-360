@@ -63,9 +63,9 @@ namespace MotorDriver
     Error DisableAllMotors();
 
     /**
-     * @brief Internal ISR function to send PWM values to PCA9685.
+     * @brief Internal function to send PWM values to PCA9685.
      * @note YOU SHOULD NOT CALL THIS FUNCTION DIRECTLY.
-     * @return void.
+     * @return Error if send failed
      */
-    void __ISRSendValues();
+    Error SendData();
 }

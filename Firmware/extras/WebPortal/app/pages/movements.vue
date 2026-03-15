@@ -260,10 +260,10 @@ function startGamepadPolling(gamepad: Gamepad) {
                     body.pos_y,
                     body.pos_z
                 );
-                // console.log(`Gamepad body posture: rot_x=${bodyAngleX} deg, rot_y=${bodyAngleY} deg`);
-            }, 100);
+                console.log(`Gamepad body posture: rot_x=${bodyAngleX} deg, rot_y=${bodyAngleY} deg`);
+            }, 50);
         }
-    }, 200); // Polling period in ms
+    }, 100); // Polling period in ms
 }
 
 </script>

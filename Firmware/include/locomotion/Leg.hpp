@@ -1,6 +1,7 @@
 #pragma once
 #include "locomotion/Joint.hpp"
 #include "locomotion/LegKinematics.hpp"
+#include "locomotion/utils.hpp"
 #include "common/geometry.hpp"
 
 class Leg
@@ -8,9 +9,23 @@ class Leg
 public:
     constexpr static const char* TAG = "Leg";
 
+    /// @brief Leg index enum
+    enum class Index {
+        /// @brief  Front Left Leg
+        FRONT_LEFT = 0,
+        /// @brief  Front Right Leg
+        FRONT_RIGHT = 1,
+        /// @brief  Back Left Leg
+        BACK_LEFT = 2,
+        /// @brief  Back Right Leg
+        BACK_RIGHT = 3,
+        /// @brief  Total number of legs in the body
+        COUNT = 4
+    };
+
     Leg();
 
-    Leg(Joint hip_roll, Joint hip_pitch, Joint knee_pitch, bool y_inverted = false);
+    Leg(Joint hip_roll, Joint hip_pitch, Joint knee_pitch, AnalogDriver::Channel contact_channel, bool y_inverted = false);
 
     /**
      * @brief Initialize the leg.
@@ -25,11 +40,18 @@ public:
     Error deinit();
 
     /**
-     * @brief Update the leg state.
+     * @brief Estimate the leg state.
      * @note This method should not be called manually, it is called internally in the control loop.
      * @return Error code indicating success or failure.
      */
-    Error update();
+    Error estimateState(float dt);
+
+    /**
+     * @brief Apply a new command.
+     * @note This method should not be called manually, it is called internally in the control loop.
+     * @return Error code indicating success or failure.
+     */
+    Error applyCommand(LegJointState jointState, float dt);
 
     /**
      * @brief Enable all joints of the leg.
@@ -44,50 +66,41 @@ public:
     Error disable();
 
     /**
-     * @brief Set the target position for the leg using inverse kinematics.
-     * @param target_pos Target foot position in leg coordinate frame.
-     * @return Error code indicating success or failure.
-     */
-    Error setTarget(const Vec3f& target_pos);
-
-    /**
-     * @brief Set the target position for the leg using inverse kinematics with a specified time to reach it.
-     * @param target_pos Target foot position in leg coordinate frame.
-     * @param time_s Time in seconds to reach the target.
-     * @return Error code indicating success or failure.
-     */
-    Error setTarget_Timed(const Vec3f& target_pos, float time_s);
-
-    /**
-     * @brief Return the estimated time to reach the given target from the current position.
-     * @param target_pos Target foot position in leg coordinate frame.
-     * @return Estimated time in seconds. (negative value if an error occurs)
-     */
-    float getTimeEstimate(const Vec3f& target_pos) const;
-
-    /**
      * @brief Get the hip roll joint.
      * @return Reference to the hip roll Joint.
      */
-    Joint& getHipRoll() { return hip_roll; }
+    inline Joint& getHipRoll() { return hip_roll; }
 
     /**
      * @brief Get the hip pitch joint.
      * @return Reference to the hip pitch Joint.
      */
-    Joint& getHipPitch() { return hip_pitch; }
+    inline Joint& getHipPitch() { return hip_pitch; }
 
     /**
      * @brief Get the knee pitch joint.
      * @return Reference to the knee pitch Joint.
      */
-    Joint& getKneePitch() { return knee_pitch; }
+    inline Joint& getKneePitch() { return knee_pitch; }
+
+    /**
+     * @brief Get if the leg is inverted along the y axis
+     * @return Boolean true if inverted
+     */
+    inline bool isInverted() { return y_inverted; }
+
+    /**
+     * @brief Get if the leg touches ground or not
+     * @return Boolean true if grounded
+     */
+    inline bool isGrounded() { return grounded; }
 
 private:
     Joint hip_roll;
     Joint hip_pitch;
     Joint knee_pitch;
+    AnalogDriver::Channel contact_channel;
     bool y_inverted;
 
-    Error calculate_ik_angles(const Vec3f& target_pos, LegAngles& angles) const;
+    bool grounded;
 };

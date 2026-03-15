@@ -10,7 +10,7 @@ class Robot
 public:
     constexpr static const char* TAG = "Robot";
 
-    static Robot& GetInstance()
+    static inline Robot& GetInstance()
     {
         return *instance;
     }
@@ -45,31 +45,37 @@ public:
      * @brief Get the robot's body.
      * @return Reference to the Body.
      */
-    Body& getBody() { return body; }
+    inline Body& getBody() { return body; }
 
     /**
      * @brief Get the robot's network manager.
      * @return Reference to the NetworkManager.
      */
-    NetworkManager& getNetworkManager() { return network_manager; }
+    inline NetworkManager& getNetworkManager() { return network_manager; }
 
     /**
      * @brief Get the robot's audio manager.
      * @return Reference to the AudioManager.
      */
-    AudioManager& getAudioManager() { return audio_manager; }
+    inline AudioManager& getAudioManager() { return audio_manager; }
 
     /**
      * @brief Get the robot's ui manager.
      * @return Reference to the UIManager.
      */
-    UIManager& getUIManager() { return ui_manager; }
+    inline UIManager& getUIManager() { return ui_manager; }
 
     /**
-     * @brief Get the robot's decision loop object.
-     * @return Reference to the decision loop object.
+     * @brief Get the robot's DecisionLoop object.
+     * @return Reference to the Decisionloop object.
      */
-    DecisionLoop& getDecisionLoop() { return decision_loop; }
+    inline DecisionLoop& getDecisionLoop() { return decision_loop; }
+
+    /**
+     * @brief Get the robot's ControlLoop object
+     * @return Reference to ControlLoop object
+     */
+    inline ControlLoop& getControlLoop() { return control_loop; }
 
 private:
     static Robot* instance;
@@ -78,5 +84,7 @@ private:
     NetworkManager network_manager;
     AudioManager audio_manager;
     UIManager ui_manager;
+
     DecisionLoop decision_loop;
+    ControlLoop control_loop;
 };

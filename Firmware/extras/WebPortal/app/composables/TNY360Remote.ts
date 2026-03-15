@@ -134,32 +134,14 @@ export class TNY360Remote {
         });
     }
 
-    public getAllJointAngles(): Promise<number[]> {
-        return this.remote.send(0x25, [], Array.from({ length: 12 }, () => Type.FLOAT), []).then((args) => {
-            return args.map((angle) => RAD_TO_DEG(angle as number));
-        });
-    }
-
     public getBodyOrientation(): Promise<{ x: number; y: number; z: number; w: number }> {
-        return this.remote.send(0x26, [], Array.from({ length: 4 }, () => Type.FLOAT), []).then((args) => {
+        return this.remote.send(0x25, [], Array.from({ length: 4 }, () => Type.FLOAT), []).then((args) => {
             return {
                 x: RAD_TO_DEG(args[0] as number),
                 y: RAD_TO_DEG(args[1] as number),
                 z: RAD_TO_DEG(args[2] as number),
                 w: RAD_TO_DEG(args[3] as number),
             };
-        });
-    }
-
-    public getJointPWM(jointIndex: number): Promise<number> {
-        return this.remote.send(0x27, [Type.BYTE], [Type.INT32], [jointIndex]).then((args) => {
-            return args[0] as number;
-        });
-    }
-
-    public getJointVoltage(jointIndex: number): Promise<number> {
-        return this.remote.send(0x28, [Type.BYTE], [Type.INT32], [jointIndex]).then((args) => {
-            return args[0] as number;
         });
     }
 
@@ -174,9 +156,9 @@ export class TNY360Remote {
 
     public setBodyPosture(rotX: number, rotY: number, rotZ: number, posX: number, posY: number, posZ: number): Promise<void> {
         return this.remote.send(0x65, [Type.FLOAT, Type.FLOAT, Type.FLOAT, Type.FLOAT, Type.FLOAT, Type.FLOAT], [], [
-            posX*10, // robot works in mm not cm
-            posY*10, // robot works in mm not cm
-            posZ*10, // robot works in mm not cm
+            posX/100, // robot works in m not cm
+            posY/100, // robot works in m not cm
+            posZ/100, // robot works in m not cm
             DEG_TO_RAD(rotX),
             DEG_TO_RAD(rotY),
             DEG_TO_RAD(rotZ),
@@ -186,9 +168,9 @@ export class TNY360Remote {
     public setFeetPosition(index: number, posX: number, posY: number, posZ: number): Promise<void> {
         return this.remote.send(0x66, [Type.BYTE, Type.FLOAT, Type.FLOAT, Type.FLOAT], [], [
             index,
-            posX*10, // robot works in mm not cm
-            posY*10, // robot works in mm not cm
-            posZ*10, // robot works in mm not cm
+            posX/100, // robot works in m not cm
+            posY/100, // robot works in m not cm
+            posZ/100, // robot works in m not cm
         ]).then(() => {});
     }
 

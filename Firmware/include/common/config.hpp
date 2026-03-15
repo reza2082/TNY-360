@@ -19,27 +19,27 @@ constexpr const char* OTA_ROBOT_MODEL = "tny-360";
 
 
 /** PHYSICAL INFORMATIONS **/
-constexpr int LEG_THIGH_LENGTH_MM = 100; // in mm
-constexpr int LEG_CALF_LENGTH_MM = 100; // in mm
-constexpr int HIP_OFFSET_MM = 30; // in mm
-constexpr int HIP_POS_X_MM = 75; // in mm
-constexpr int HIP_POS_Y_MM = 50; // in mm
+constexpr float LEG_THIGH_LENGTH_M = 0.100f; // in m
+constexpr float LEG_CALF_LENGTH_M = 0.100f; // in m
+constexpr float HIP_OFFSET_M = 0.030f; // in m
+constexpr float HIP_POS_X_M = 0.075f; // in m
+constexpr float HIP_POS_Y_M = 0.050f; // in m
 
 /** DEFAULT POSE INFORMATIONS **/
-constexpr float DEFAULT_BODY_HEIGHT_MM = 140.0f; // in mm, from ground level
-constexpr float DEFAULT_FEET_SPREAD_Y_MM = 100.0f; // in mm, from body center 
-constexpr float DEFAULT_FEET_SPREAD_X_MM = 90.0f; // in mm, from body center
+constexpr float  DEFAULT_BODY_HEIGHT_M = 0.120f; // in meters, from ground level
+constexpr float DEFAULT_FEET_SPREAD_Y_M = 0.100f; // in meters, from body center
+constexpr float DEFAULT_FEET_SPREAD_X_M = 0.090f; // in meters, from body center
 
 
 /** LOGGING **/
 // Maximum number of log lines to store
-constexpr uint8_t LOG_MAX_LINES = 10;
+constexpr int LOG_MAX_LINES = 10;
 // Maximum length of each log message
-constexpr uint8_t LOG_MAX_MSG_LEN = 128;
+constexpr int LOG_MAX_MSG_LEN = 128;
 
 /** FILESYSTEM **/
 // Maximum path length for file operations
-constexpr uint8_t MAX_PATH_LEN = 128;
+constexpr int MAX_PATH_LEN = 128;
 
 /** RPC **/
 constexpr int RPC_QUEUE_SIZE = 32; // number of pending RPC jobs (between core 0 and core 1)
@@ -107,6 +107,11 @@ constexpr gpio_num_t SCANNER_SLCT_PIN1 = GPIO_NUM_42;
 constexpr gpio_num_t SCANNER_SLCT_PIN2 = GPIO_NUM_41;
 constexpr gpio_num_t SCANNER_SLCT_PIN3 = GPIO_NUM_40;
 constexpr gpio_num_t SCANNER_SLCT_PIN4 = GPIO_NUM_39;
+
+
+/** LEG **/
+// Voltage threshold at which the leg is considered as grounded (touching ground)
+constexpr int LEG_GROUNDED_THRESHOLD_MV = 3300 / 2;
 
 
 /** IMU **/

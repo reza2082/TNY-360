@@ -190,7 +190,7 @@ Protocol::CommandHandler getters[] = {
         struct RPCResult { Quatf data; };
         RPC::ExecuteThreadSafe<RPCResult>(
             []() -> RPCResult { // task getter, executing on core 1
-                Quatf& orientation = Robot::GetInstance().getBody().getIMU().getOrientation();
+                Quatf orientation = Quatf::FromEulerAngles(Robot::GetInstance().getBody().getIMU().getOrientation());
                 return { orientation };
             }, 
             [req, resolve](RPCResult res) { // resolve callback

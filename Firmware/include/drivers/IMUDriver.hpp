@@ -27,7 +27,16 @@ namespace IMUDriver
     */
     Error Deinit();
 
-    void __ISRReadData();
+    /**
+     * @brief Internal function to read data from the MPU6050.
+     * @note YOU SHOULD NOT CALL THIS FUNCTION DIRECTLY.
+     * @return void.
+     */
+    Error ReadData();
 
+    /**
+     * @brief Get the last read values from the MPU6050.
+     * @return most recent IMUData object.
+     */
     IMUData& GetData();
 }

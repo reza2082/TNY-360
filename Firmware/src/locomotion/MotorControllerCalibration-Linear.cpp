@@ -14,7 +14,7 @@ Error MotorController::detect_position_feedback_noise(AnalogDriver::Value* out_n
     AnalogDriver::Value noise_samples[CALIB_NOISE_NB_SAMPLES];
     for (uint8_t i = 0; i < CALIB_NOISE_NB_SAMPLES; i++)
     {
-        if (Error err = AnalogDriver::GetVoltage(analog_channel, &noise_samples[i]); err != Error::None)
+        if (Error err = AnalogDriver::GetVoltage(analog_channel, noise_samples[i]); err != Error::None)
         {
             Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration");
             calibration_state = CalibrationState::UNCALIBRATED;
@@ -73,7 +73,7 @@ Error MotorController::detect_servo_pwm_deadband(MotorDriver::Value default_posi
 
     // Measure default position voltage
     AnalogDriver::Value default_voltage = 0;
-    if (Error err = AnalogDriver::GetVoltage(analog_channel, &default_voltage); err != Error::None)
+    if (Error err = AnalogDriver::GetVoltage(analog_channel, default_voltage); err != Error::None)
     {
         Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration");
         calibration_state = CalibrationState::UNCALIBRATED;
@@ -97,7 +97,7 @@ Error MotorController::detect_servo_pwm_deadband(MotorDriver::Value default_posi
                 return err;
             }
             vTaskDelay(pdMS_TO_TICKS(CALIB_DEADBAND_TEST_DELAY_MS));
-            if (Error err = AnalogDriver::GetVoltage(analog_channel, &current_voltage); err != Error::None)
+            if (Error err = AnalogDriver::GetVoltage(analog_channel, current_voltage); err != Error::None)
             {
                 Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration");
                 calibration_state = CalibrationState::UNCALIBRATED;
@@ -151,7 +151,7 @@ Error MotorController::detect_feedback_latency(AnalogDriver::Value noise_level_m
 
         // get the voltage
         AnalogDriver::Value base_voltage = 0;
-        if (Error err = AnalogDriver::GetVoltage(analog_channel, &base_voltage); err != Error::None)
+        if (Error err = AnalogDriver::GetVoltage(analog_channel, base_voltage); err != Error::None)
         {
             Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration");
             return err;
@@ -172,7 +172,7 @@ Error MotorController::detect_feedback_latency(AnalogDriver::Value noise_level_m
         bool has_moved = false;
         while (!has_moved)
         {
-            if (Error err = AnalogDriver::GetVoltage(analog_channel, &current_voltage); err != Error::None)
+            if (Error err = AnalogDriver::GetVoltage(analog_channel, current_voltage); err != Error::None)
             {
                 Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration");
                 return err;
@@ -363,7 +363,7 @@ Error MotorController::run_calibration_sequence()
                 return err;
             }
             
-            if (Error err = AnalogDriver::GetVoltage(analog_channel, &current_voltage); err != Error::None)
+            if (Error err = AnalogDriver::GetVoltage(analog_channel, current_voltage); err != Error::None)
             {
                 Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration. Error: %d", static_cast<uint8_t>(err));
                 abort_calibration();
@@ -502,7 +502,7 @@ Error MotorController::run_calibration_sequence()
                 return err;
             }
             
-            if (Error err = AnalogDriver::GetVoltage(analog_channel, &current_voltage); err != Error::None)
+            if (Error err = AnalogDriver::GetVoltage(analog_channel, current_voltage); err != Error::None)
             {
                 Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration. Error: %d", static_cast<uint8_t>(err));
                 abort_calibration();
@@ -637,7 +637,7 @@ Error MotorController::run_calibration_sequence()
             {
                 // take multiple readings to ensure stability
                 vTaskDelay(pdMS_TO_TICKS(200));
-                if (Error err = AnalogDriver::GetVoltage(analog_channel, &current_voltage); err != Error::None)
+                if (Error err = AnalogDriver::GetVoltage(analog_channel, current_voltage); err != Error::None)
                 {
                     Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration. Error: %d", static_cast<uint8_t>(err));
                     abort_calibration();
@@ -690,7 +690,7 @@ Error MotorController::run_calibration_sequence()
             {
                 // take multiple readings to ensure stability
                 vTaskDelay(pdMS_TO_TICKS(200));
-                if (Error err = AnalogDriver::GetVoltage(analog_channel, &current_voltage); err != Error::None)
+                if (Error err = AnalogDriver::GetVoltage(analog_channel, current_voltage); err != Error::None)
                 {
                     Log::Add(Log::Level::Error, TAG, "Failed to read analog voltage during calibration. Error: %d", static_cast<uint8_t>(err));
                     abort_calibration();

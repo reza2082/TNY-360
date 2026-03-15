@@ -48,6 +48,12 @@ void DecisionLoop::setBodyVelocity(Vec3f vel)
     intent.body_vel = vel;
 }
 
+void DecisionLoop::setBodyTransform(Transformf transform)
+{
+    intent.body_pos = transform.position;
+    intent.body_rot = transform.rotation.toEulerAngles();
+}
+
 void DecisionLoop::decision_loop()
 {
     loop_running = true;

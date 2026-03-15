@@ -104,7 +104,7 @@ namespace AnalogDriver
         return Error::None;
     }
 
-    Error GetVoltage(Channel id, Value* outVoltage_mV)
+    Error GetVoltage(Channel id, Value& outVoltage_mV)
     {
         if (id >= CHANNEL_COUNT)
         {
@@ -112,7 +112,7 @@ namespace AnalogDriver
             return Error::InvalidParameters;
         }
 
-        *outVoltage_mV = voltages_buffer[id];
+        outVoltage_mV = voltages_buffer[id];
         return Error::None;
     }
 

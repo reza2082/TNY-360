@@ -52,7 +52,7 @@ bool FastRegression::compute(float &slope, float &offset, float &error_std)
     // Fill output variables
     slope = (float) a;
     offset = (float) b;
-    error_std = (float) std::sqrt(sse / n);
+    error_std = (float) sqrtf(sse / n);
 
     return true;
 }
