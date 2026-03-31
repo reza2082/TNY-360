@@ -59,27 +59,6 @@ Follow the links below to find the technical files and documentation you need to
 
 ---
 
-## 💻 Firmware Quick Start
-
-The firmware is built on **PlatformIO** using the **ESP-IDF** framework.
-
-### Prerequisites
-1.  **VS Code** installed.
-2.  **PlatformIO** extension installed in VS Code.
-
-### Installation
-1.  **Clone** this repository:
-    ```bash
-    git clone --recursive https://github.com/TNY-Robotics/TNY-360.git
-    ```
-2.  **Open** the `Firmware/` folder in VS Code.
-3.  **Connect** your ESP32-S3 via USB.
-4.  **Upload:** Click the generic "Arrow" icon (➡️) in the PlatformIO bottom bar to Build & Flash.
-
-> **Note:** If you are missing drivers, run `git submodule update --init --recursive` to pull the TNY-Robotics custom components.
-
----
-
 ## 📂 Repository Structure
 
 * `BOM/` — **Bill of Materials.** Detailed lists of all components, PCBs, screws, and cables, with links.
