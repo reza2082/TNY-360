@@ -29,7 +29,7 @@ To learn how to fully assemble you TNY-360, check out the [TNY-360 Documentation
 | M2.5 | 4 mm   |    2     | Head - Face Plate           | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 | M2.5 | 4 mm   |    4     | Head - PCB                  | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 |      |        |          |                             |                                                          |
-| M2.5 | 4 mm   |    8     | Shoulders - Top             | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
+| M2.5 | 6 mm   |    8     | Shoulders - Top             | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 | M2.5 | 4 mm   |    2     | Ears - Main Screw           | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 | M2.5 | 4 mm   |    3     | Back - PCB                  | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 | M2.5 | 4 mm   |    4     | Back - Cover                | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
@@ -78,8 +78,8 @@ To learn how to fully assemble you TNY-360, check out the [TNY-360 Documentation
 | :----------------- | :------: | -------------------------------------------------------- |
 | M1.4 Screw - 5 mm  |    32    | [Click here](https://s.click.aliexpress.com/e/_c3CWv1Vp) |
 |                    |          |                                                          |
-| M2.5 Screw - 4 mm  |    57    | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
-| M2.5 Screw - 6 mm  |    20    | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
+| M2.5 Screw - 4 mm  |    49    | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
+| M2.5 Screw - 6 mm  |    28    | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 | M2.5 Screw - 10 mm |    12    | [Click here](https://s.click.aliexpress.com/e/_c3p0AJO3) |
 |                    |          |                                                          |
 | M2.5 Insert - 2 mm |    61    | [Click here](https://fr.aliexpress.com/item/1005007653131713.html) |
