@@ -11,6 +11,8 @@ namespace IMUDriver
 
     Error Init()
     {
+        LOG_SCOPE(TAG, "IMUDriver::Init");
+
         if (initialized) return Error::None;
         
         if (Error err = I2C::Init(); err != Error::None)
@@ -23,7 +25,7 @@ namespace IMUDriver
 
         if (esp_err_t err = mpu6050_create(I2C::handle_primary, mpu_info, &mpu_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to create MPU6050 handle");
+            LOG_ERROR(TAG, "Failed to create MPU6050 handle");
             return Error::HardwareFailure;
         }
 
@@ -31,13 +33,13 @@ namespace IMUDriver
 
         if (esp_err_t err = mpu6050_config(mpu_handle, mpu_config); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to configure MPU6050");
+            LOG_ERROR(TAG, "Failed to configure MPU6050");
             return Error::HardwareFailure;
         }
 
         if (esp_err_t err = mpu6050_wake_up(mpu_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to wake up MPU6050");
+            LOG_ERROR(TAG, "Failed to wake up MPU6050");
             return Error::HardwareFailure;
         }
 
@@ -49,7 +51,7 @@ namespace IMUDriver
     {
         if (esp_err_t err = mpu6050_delete(mpu_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to delete MPU6050 handle");
+            LOG_ERROR(TAG, "Failed to delete MPU6050 handle");
             return Error::HardwareFailure;
         }
         initialized = false;
@@ -63,13 +65,13 @@ namespace IMUDriver
 
         if (esp_err_t err = mpu6050_get_accel(mpu_handle, &accel); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to read accelerometer data from MPU6050");
+            LOG_ERROR(TAG, "Failed to read accelerometer data from MPU6050");
             return Error::HardwareFailure;
         }
 
         if (esp_err_t err = mpu6050_get_gyro(mpu_handle, &gyro); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to read gyroscope data from MPU6050");
+            LOG_ERROR(TAG, "Failed to read gyroscope data from MPU6050");
             return Error::HardwareFailure;
         }
 

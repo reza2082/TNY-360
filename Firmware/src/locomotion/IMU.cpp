@@ -11,8 +11,11 @@ IMU::IMU()
 
 Error IMU::init()
 {
+    LOG_SCOPE(TAG, "IMU::init");
+    
     if (Error err = IMUDriver::Init(); err != Error::None)
     {
+        ErrorHandle({ErrorCode::IMUInitFailed, "Failed to initialize IMU Driver"});
         return err;
     }
     return Error::None;

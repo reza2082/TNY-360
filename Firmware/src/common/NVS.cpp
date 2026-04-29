@@ -62,16 +62,16 @@ namespace NVS
 
     Error Init()
     {
-        if (initialized) {
-            return Error::None;
-        }
+        LOG_SCOPE(TAG, "NVS::Init");
+
+        if (initialized) return Error::None;
 
         esp_err_t ret = nvs_flash_init();
         if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
         {
-            Log::Add(Log::Level::Warning, TAG, "NVS flash init failed, erasing and retrying...");
+            LOG_WARNING(TAG, "NVS flash init failed, erasing and retrying...");
             if (nvs_flash_erase() != ESP_OK) {
-                Log::Add(Log::Level::Error, TAG, "Failed to erase NVS flash");
+                LOG_ERROR(TAG, "Failed to erase NVS flash");
                 return Error::SoftwareFailure;
             }
             ret = nvs_flash_init();
@@ -79,17 +79,17 @@ namespace NVS
         
         if (ret != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to initialize NVS flash");
+            LOG_ERROR(TAG, "Failed to initialize NVS flash");
             return Error::SoftwareFailure;
         }
 
         initialized = true;
-
         return Error::None;
     }
 
     Error Open(const char* namespace_name, Handle** out_handle)
     {
+        LOG_SCOPE(TAG, "NVS::Open");
         if (!initialized)
         {
             Error err = Init();
@@ -108,10 +108,10 @@ namespace NVS
         if (ret != ESP_OK)
         {
             if (ret == ESP_ERR_NVS_NOT_FOUND) {
-                Log::Add(Log::Level::Error, TAG, "NVS namespace not found: %s", namespace_name);
+                LOG_ERROR(TAG, "NVS namespace not found: %s", namespace_name);
                 return Error::NotFound;
             } else {
-                Log::Add(Log::Level::Error, TAG, "Failed to open NVS namespace: %s - Error: 0x%x", namespace_name, ret);
+                LOG_ERROR(TAG, "Failed to open NVS namespace: %s - Error: 0x%x", namespace_name, ret);
                 return Error::Unknown;
             }
         }

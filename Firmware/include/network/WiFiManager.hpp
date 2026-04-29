@@ -76,6 +76,10 @@ public:
      */
     Mode getMode() const { return mode; }
 
+    const char* getIPAddr() const { return ip_address; }
+
+    const char* getSSID() { return ssid; }
+
     void __wifi_event_handler(esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 private:

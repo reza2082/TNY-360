@@ -38,12 +38,18 @@ namespace ScreenDriver
         }
     }
 
-    Error Init() {
+    Error Init()
+    {
+        if (Error err = I2C::Init(); err != Error::None)
+        {
+            return err;
+        }
+
         esp_lcd_panel_io_handle_t io_handle = NULL;
         esp_lcd_panel_io_i2c_config_t io_config = ESP_SH1106_DEFAULT_IO_CONFIG;
         if (esp_err_t err = esp_lcd_new_panel_io_i2c(I2C::handle_secondary, &io_config, &io_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Couldn't create panel IO");
+            LOG_ERROR(TAG, "Couldn't create panel IO");
             return Error::SoftwareFailure;
         }
 
@@ -59,17 +65,17 @@ namespace ScreenDriver
         };
         if (esp_err_t err = esp_lcd_new_panel_sh1106(io_handle, &panel_config, &panel_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Couldn't create sh1106 panel");
+            LOG_ERROR(TAG, "Couldn't create sh1106 panel");
             return Error::SoftwareFailure;
         }
         if (esp_err_t err = esp_lcd_panel_reset(panel_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Couln't reset panel");
+            LOG_ERROR(TAG, "Couln't reset panel");
             return Error::SoftwareFailure;
         }
         if (esp_err_t err = esp_lcd_panel_init(panel_handle); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Couldn't init panel");
+            LOG_ERROR(TAG, "Couldn't init panel");
             return Error::SoftwareFailure;
         }
 
@@ -78,7 +84,7 @@ namespace ScreenDriver
 
         if (esp_err_t err = esp_lcd_panel_disp_on_off(panel_handle, true); err != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Couldn't turn the display on");
+            LOG_ERROR(TAG, "Couldn't turn the display on");
             return Error::SoftwareFailure;
         }
         
@@ -103,7 +109,7 @@ namespace ScreenDriver
         screen_to_buffer(&info, buffer_data);
         esp_err_t err = esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, SH1106_WIDTH, SH1106_HEIGHT, buffer_data);
         if (err != ESP_OK) {
-            Log::Add(Log::Level::Error, TAG, "Couldn't draw bitmap on panel");
+            LOG_ERROR(TAG, "Couldn't draw bitmap on panel");
             return Error::SoftwareFailure;
         }
         return Error::None;

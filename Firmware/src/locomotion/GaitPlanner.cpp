@@ -41,7 +41,7 @@ Error GaitPlanner::update(float dt, BodyCartesianState& state)
         if (is_moving) // just stopped, reset legs
         {
             is_moving = false;
-            Log::Add(Log::Level::Info, TAG, "Just stopped. Resetting legs");
+            LOG_INFO(TAG, "Just stopped. Resetting legs");
         }
 
         for (int i = 0; i < 4; i++) {
@@ -56,7 +56,7 @@ Error GaitPlanner::update(float dt, BodyCartesianState& state)
     {
         main_gait_phase = 0.0f;
         is_moving = true;
-        Log::Add(Log::Level::Info, TAG, "Started moving.");
+        LOG_INFO(TAG, "Started moving.");
     }
 
     // Advance the main gait phase
@@ -138,7 +138,7 @@ void GaitPlanner::apply_gait_offsets()
             leg_phase_offsets[2] = 0.25f; // BL
             leg_phase_offsets[3] = 0.75f; // BR
             if (gait_config.duty_factor < 0.75f)
-                Log::Add(Log::Level::Warning, TAG, "GaitType::Creep selected but gait_config.duty_factor is < 0.75f");
+                LOG_WARNING(TAG, "GaitType::Creep selected but gait_config.duty_factor is < 0.75f");
             break;
         case GaitType::Run: // Run, front legs together, back legs together
             leg_phase_offsets[0] = 0.0f; // FL

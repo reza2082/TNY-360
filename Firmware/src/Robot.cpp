@@ -1,5 +1,6 @@
 #include "Robot.hpp"
 #include "common/Log.hpp"
+#include "common/LED.hpp"
 
 Robot* Robot::instance = nullptr;
 
@@ -10,7 +11,24 @@ Robot::Robot()
 
 Error Robot::init()
 {
-    if (Error err = body.init(); err != Error::None)
+    LOG_SCOPE(TAG, "Robot::init");
+
+    // Initialize the LED module to diplay status
+    if (Error err = LED::Init(); err != Error::None)
+    {
+        LOG_ERROR(TAG, "Couldn't initialize LED module");
+        return err;
+    }
+
+    // Set yellow color (init color)
+    LED::SetColor(0, LED::Color(16, 16, 0), 0.5f);
+
+    if (Error err = ui_manager.init(); err != Error::None)
+    {
+        return err;
+    }
+
+    if (Error err = audio_manager.init(); err != Error::None)
     {
         return err;
     }
@@ -20,12 +38,7 @@ Error Robot::init()
         return err;
     }
 
-    if (Error err = ui_manager.init(); err != Error::None)
-    {
-        return err;
-    }
-
-    if (Error err = audio_manager.init(); err != Error::None)
+    if (Error err = body.init(); err != Error::None)
     {
         return err;
     }
@@ -41,6 +54,9 @@ Error Robot::init()
     {
         return err;
     }
+
+    // all good, turn orange for startup
+    LED::SetColor(0, LED::Color(16, 8, 0), 0.5f);
 
     return Error::None;
 }
@@ -63,6 +79,12 @@ Error Robot::start()
     // allow some time for systems to stabilize before enabling motors and everything
     // (to get motor feedback data and all that stuff)
     vTaskDelay(pdMS_TO_TICKS(500));
+
+    // robot is ready ! Turn green (low intensity to avoid using power for nothing)
+    LED::SetColor(0, LED::Color(0, 8, 0), 0.5f);
+
+    // Set the menu to face (face only displays when everything is working)
+    Menus::SetCurrentMenu(Menus::GetMenuFace());
 
     return Error::None;
 }
@@ -98,12 +120,7 @@ Error Robot::deinit()
         return err;
     }
 
-    if (Error err = audio_manager.deinit(); err != Error::None)
-    {
-        return err;
-    }
-
-    if (Error err = ui_manager.deinit(); err != Error::None)
+    if (Error err = body.deinit(); err != Error::None)
     {
         return err;
     }
@@ -113,7 +130,12 @@ Error Robot::deinit()
         return err;
     }
 
-    if (Error err = body.deinit(); err != Error::None)
+    if (Error err = audio_manager.deinit(); err != Error::None)
+    {
+        return err;
+    }
+
+    if (Error err = ui_manager.deinit(); err != Error::None)
     {
         return err;
     }

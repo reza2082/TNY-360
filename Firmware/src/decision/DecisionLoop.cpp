@@ -26,7 +26,7 @@ Error DecisionLoop::start()
         decision_loop->decision_loop();
     }, "DecisionLoop_Core0", 8192, this, tskIDLE_PRIORITY + 10, &decision_loop_task, CORE_BRAIN) != pdPASS)
     {
-        Log::Add(Log::Level::Error, TAG, "Error creating DecisionLoop task");
+        LOG_ERROR(TAG, "Error creating DecisionLoop task");
         return Error::Unknown;
     }
 
@@ -67,7 +67,7 @@ void DecisionLoop::decision_loop()
         intent.timestamp_ms = esp_log_timestamp();
         if (IPC::setIntent(intent) != Error::None)
         {
-            Log::Add(Log::Level::Warning, TAG, "Failed to send intent to Reflex core");
+            LOG_WARNING(TAG, "Failed to send intent to Reflex core");
         }
 
         vTaskDelayUntil(&xLastWakeTime, xFrequency);

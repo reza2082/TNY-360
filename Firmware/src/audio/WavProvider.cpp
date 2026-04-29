@@ -11,13 +11,13 @@ Error WavProvider::loadFromFile(const char* filepath)
 {
     if (Error err = LittleFS::Init(); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Failed to initialize LittleFS: %d", ErrorToString(err));
+        LOG_ERROR(TAG, "Failed to initialize LittleFS: %d", ErrorToString(err));
         return err;
     }
 
     if (Error err = LittleFS::LoadFileContent(filepath, &file_content, &content_size); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Failed to load WAV file '%s': %d", filepath, ErrorToString(err));
+        LOG_ERROR(TAG, "Failed to load WAV file '%s': %d", filepath, ErrorToString(err));
         return err;
     }
     read_position = 0;

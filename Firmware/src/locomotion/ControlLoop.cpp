@@ -63,7 +63,7 @@ Error ControlLoop::init()
 
     if (err != pdPASS)
     {
-        Log::Add(Log::Level::Error, TAG, "Failed to create timer task");
+        LOG_ERROR(TAG, "Failed to create timer task");
         return Error::SoftwareFailure;
     }
 
@@ -75,7 +75,7 @@ Error ControlLoop::init()
     };
     if (esp_err_t err = gptimer_new_timer(&timer_config, &timer); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "gptimer_new_timer failed");
+        LOG_ERROR(TAG, "gptimer_new_timer failed");
         return Error::SoftwareFailure;
     }
 
@@ -84,7 +84,7 @@ Error ControlLoop::init()
     };
     if (esp_err_t err = gptimer_register_event_callbacks(timer, &cbs, NULL); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "gptimer_register_event_callbacks failed");
+        LOG_ERROR(TAG, "gptimer_register_event_callbacks failed");
         return Error::SoftwareFailure;
     }
 
@@ -97,14 +97,14 @@ Error ControlLoop::init()
     };
     if (esp_err_t err = gptimer_set_alarm_action(timer, &alarm_config); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "gptimer_set_alarm_action failed");
+        LOG_ERROR(TAG, "gptimer_set_alarm_action failed");
         return Error::SoftwareFailure;
     }
 
     // Enable the timer
     if (esp_err_t err = gptimer_enable(timer); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "gptimer_enable failed");
+        LOG_ERROR(TAG, "gptimer_enable failed");
         return Error::SoftwareFailure;
     }
 
@@ -116,7 +116,7 @@ Error ControlLoop::start()
 {
     if (esp_err_t err = gptimer_start(timer); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "Error starting Control Loop timer : 0x%0X", err);
+        LOG_ERROR(TAG, "Error starting Control Loop timer : 0x%0X", err);
         return Error::HardwareFailure;
     }
 
@@ -128,7 +128,7 @@ Error ControlLoop::stop()
 {
     if (esp_err_t err = gptimer_stop(timer); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "Error stopping Control Loop timer : 0x%0X", err);
+        LOG_ERROR(TAG, "Error stopping Control Loop timer : 0x%0X", err);
         return Error::HardwareFailure;
     }
 
@@ -153,7 +153,7 @@ Error ControlLoop::deinit()
 
     if (esp_err_t err = gptimer_disable(timer); err != ESP_OK)
     {
-        Log::Add(Log::Level::Error, TAG, "Error disabling Control Loop gptimer ; 0x%0X", err);
+        LOG_ERROR(TAG, "Error disabling Control Loop gptimer ; 0x%0X", err);
         return Error::HardwareFailure;
     }
 
@@ -182,14 +182,14 @@ Error ControlLoop::control_task()
         intent.gait = GaitPlanner::GaitType::Walk;
 
         if (!watchdog_active) {
-            Log::Add(Log::Level::Warning, TAG, "Control intent watchdog triggered. Stop overthinking!");
+            LOG_WARNING(TAG, "Control intent watchdog triggered. Stop overthinking!");
             watchdog_active = true;
         }
     }
     else
     {
         if (watchdog_active) {
-            Log::Add(Log::Level::Info, TAG, "Brain is back online!");
+            LOG_INFO(TAG, "Brain is back online!");
             watchdog_active = false;
         }
     }
@@ -199,17 +199,17 @@ Error ControlLoop::control_task()
     // Read the ADC channels and IMU Data
     if (Error err = AnalogDriver::ReadAllChannels(); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Error reading all ADC channels");
+        LOG_ERROR(TAG, "Error reading all ADC channels");
     }
     if (Error err = IMUDriver::ReadData(); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Error reading data from IMU");
+        LOG_ERROR(TAG, "Error reading data from IMU");
     }
 
     // Estimate body state from new IMU and Analog data (calls Legs, Joint, IMU estimateState functions)
     if (Error err = Robot::GetInstance().getBody().estimateState(CONTROL_LOOP_DT_S); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Error estimating body state");
+        LOG_ERROR(TAG, "Error estimating body state");
     }
 
     /*** 2 - RUN CARTESIAN CONTROL (USING BRAIN CONTROL INTENT) ***/
@@ -246,7 +246,7 @@ Error ControlLoop::control_task()
     // IK
     if (Error err = kinematics_engine.computeBodyIK(cartesian_state, joint_state); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "KinematicsEngine failed to calculate body IK");
+        LOG_ERROR(TAG, "KinematicsEngine failed to calculate body IK");
         return err;
     }
 
@@ -261,14 +261,14 @@ Error ControlLoop::control_task()
     // Update the body (this updates all joints in the body)
     if (Error err = Robot::GetInstance().getBody().applyCommand(joint_state, CONTROL_LOOP_DT_S); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Failed to apply command in control task with error: %s", ErrorToString(err));
+        LOG_ERROR(TAG, "Failed to apply command in control task with error: %s", ErrorToString(err));
         // return err;
     }
     
     // Send the new motor values
     if (Error err = MotorDriver::SendData(); err != Error::None)
     {
-        Log::Add(Log::Level::Error, TAG, "Error sending MotorDriver data");
+        LOG_ERROR(TAG, "Error sending MotorDriver data");
     }
 
     /*** 6 - OTHER CORE1 JOBS ***/

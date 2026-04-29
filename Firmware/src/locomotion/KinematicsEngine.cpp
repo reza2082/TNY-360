@@ -40,7 +40,7 @@ Error KinematicsEngine::computeBodyIK(const BodyCartesianState& cartesian, BodyJ
         // 6. Calculer l'IK de cette patte
         if (Error err = computeLegIK(target_hip_frame, joints.leg_joints[i]); err != Error::None)
         {
-            Log::Add(Log::Level::Error, TAG, "IK Failed for leg %d", i);
+            LOG_ERROR(TAG, "IK Failed for leg %d", i);
             return err; // Tu pourrais aussi continuer et figer cette patte
         }
     }
@@ -54,7 +54,7 @@ Error KinematicsEngine::computeLegIK(const Vec3f& target, LegJointState& joints)
     float dist_zy = sqrtf(dist_zy_sq - config.hip_offset * config.hip_offset);
 
     if (dist_zy > (config.length_thigh + config.length_calf)) {
-        Log::Add(Log::Level::Error, TAG, "Feet position is too far (%.2fm)", dist_zy);
+        LOG_ERROR(TAG, "Feet position is too far (%.2fm)", dist_zy);
         return Error::Unreachable; 
     }
 
@@ -63,7 +63,7 @@ Error KinematicsEngine::computeLegIK(const Vec3f& target, LegJointState& joints)
 
     float dist_leg = sqrtf(dist_zy * dist_zy + target.x * target.x);
     if (dist_leg > (config.length_thigh + config.length_calf)) {
-        Log::Add(Log::Level::Error, TAG, "Feet position is too far after hip roll compensation (%.2fm)", dist_leg);
+        LOG_ERROR(TAG, "Feet position is too far after hip roll compensation (%.2fm)", dist_leg);
         return Error::Unreachable;
     }
 

@@ -11,9 +11,9 @@ namespace LittleFS
 
     Error Init()
     {
-        if (initialized) {
-            return Error::None;
-        }
+        LOG_SCOPE(TAG, "LittleFS::Init");
+        
+        if (initialized) return Error::None;
 
         // Mount LittleFS
         esp_vfs_littlefs_conf_t conf = {
@@ -25,7 +25,7 @@ namespace LittleFS
         esp_err_t ret = esp_vfs_littlefs_register(&conf);
 
         if (ret != ESP_OK) {
-            Log::Add(Log::Level::Error, TAG, "Failed to mount LittleFS");
+            LOG_ERROR(TAG, "Failed to mount LittleFS");
             return Error::Unknown;
         }
 

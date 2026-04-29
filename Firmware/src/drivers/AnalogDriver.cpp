@@ -26,7 +26,7 @@ namespace AnalogDriver
             gpio_set_level(SCANNER_SLCT_PIN3, (channel & 0b0100) >> 2) != ESP_OK ||
             gpio_set_level(SCANNER_SLCT_PIN4, (channel & 0b1000) >> 3) != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to select index with GPIO");
+            LOG_ERROR(TAG, "Failed to select index with GPIO");
             return Error::Unknown;
         }
         return Error::None;
@@ -34,8 +34,9 @@ namespace AnalogDriver
 
     Error Init()
     {
-        if (initialized)
-            return Error::None;
+        LOG_SCOPE(TAG, "AnalogDriver::Init");
+
+        if (initialized) return Error::None;
 
         // Setup select pins
         gpio_config_t io_conf;
@@ -46,7 +47,7 @@ namespace AnalogDriver
         io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
         if (gpio_config(&io_conf) != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to configure GPIO for select pins");
+            LOG_ERROR(TAG, "Failed to configure GPIO for select pins");
             return Error::Unknown;
         }
 
@@ -58,7 +59,7 @@ namespace AnalogDriver
         };
         if (adc_oneshot_new_unit(&init_config, &adc_handle) != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to create ADC oneshot handle");
+            LOG_ERROR(TAG, "Failed to create ADC oneshot handle");
             return Error::Unknown;
         }
 
@@ -69,7 +70,7 @@ namespace AnalogDriver
         };
         if (adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_1, &config) != ESP_OK)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to configure ADC oneshot channel");
+            LOG_ERROR(TAG, "Failed to configure ADC oneshot channel");
             return Error::Unknown;
         }
 
@@ -108,7 +109,7 @@ namespace AnalogDriver
     {
         if (id >= CHANNEL_COUNT)
         {
-            Log::Add(Log::Level::Error, TAG, "GetVoltage: Invalid channel id %d", id);
+            LOG_ERROR(TAG, "GetVoltage: Invalid channel id %d", id);
             return Error::InvalidParameters;
         }
 
@@ -132,7 +133,7 @@ namespace AnalogDriver
             Channel id = ids[i];
             if (id >= CHANNEL_COUNT)
             {
-                Log::Add(Log::Level::Error, TAG, "GetVoltages: Invalid channel id %d", id);
+                LOG_ERROR(TAG, "GetVoltages: Invalid channel id %d", id);
                 return Error::InvalidParameters;
             }
             outVoltages_mV[i] = voltages_buffer[id];
@@ -155,7 +156,7 @@ namespace AnalogDriver
             }
             else
             {
-                Log::Add(Log::Level::Error, TAG, "Failed to read ADC value on channel %d", i);
+                LOG_ERROR(TAG, "Failed to read ADC value on channel %d", i);
             }
         }
         return Error::None;

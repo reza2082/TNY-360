@@ -26,7 +26,7 @@ Error SoundMixer::init()
 
     if (ret != pdPASS)
     {
-        Log::Add(Log::Level::Error, TAG, "Failed to create SoundMixer task");
+        LOG_ERROR(TAG, "Failed to create SoundMixer task");
         return Error::SoftwareFailure;
     }
 
@@ -71,7 +71,7 @@ Error SoundMixer::addSoundProvider(SoundProvider* provider)
             return Error::None;
         }
     }
-    Log::Add(Log::Level::Warning, TAG, "No available slot to add audio provider");
+    LOG_WARNING(TAG, "No available slot to add audio provider");
     return Error::NoMemory;
 }
 

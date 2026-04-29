@@ -18,7 +18,7 @@ Error Joint::ClampVelocity(float max_velocity_rad_s)
 {
     if (max_velocity_rad_s < 0.f || max_velocity_rad_s > MAX_VELOCITY_RAD_S)
     {
-        Log::Add(Log::Level::Error, TAG, "Requested max joint velocity %.2f rad/s is out of bounds (0 - %.2f rad/s)", max_velocity_rad_s, MAX_VELOCITY_RAD_S);
+        LOG_ERROR(TAG, "Requested max joint velocity %.2f rad/s is out of bounds (0 - %.2f rad/s)", max_velocity_rad_s, MAX_VELOCITY_RAD_S);
         return Error::InvalidParameters;
     }
     if (max_velocity_rad_s == 0.f) // if zero, disable clamp
@@ -41,6 +41,8 @@ Joint::Joint(uint8_t id, MotorController motor_controller, float min_angle_rad, 
 
 Error Joint::init()
 {
+    LOG_SCOPE(TAG, "Joint::init [id=%d]", id);
+
     // Register this joint instance
     joints[id] = this;
 
@@ -86,7 +88,7 @@ Error Joint::init()
     {
         return err;
     }
-
+    
     return Error::None;
 }
 
@@ -121,7 +123,7 @@ Error Joint::applyCommand(float joint_angle_rad, float dt)
 {
     if (joint_angle_rad < min_angle_rad || joint_angle_rad > max_angle_rad)
     {
-        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested target angle %.2f rad is out of bounds (%.2f - %.2f rad)", id, joint_angle_rad, min_angle_rad, max_angle_rad);
+        LOG_ERROR(TAG, "JOINT %d - Requested target angle %.2f rad is out of bounds (%.2f - %.2f rad)", id, joint_angle_rad, min_angle_rad, max_angle_rad);
         return Error::InvalidParameters;
     }
     target_angle_rad = joint_angle_rad;
@@ -215,7 +217,7 @@ Error Joint::setVelocity(float velocity_rad_s)
     // clamp velocity to allowed range
     if (velocity_rad_s < 0.f || velocity_rad_s > MAX_VELOCITY_RAD_S)
     {
-        Log::Add(Log::Level::Error, TAG, "JOINT %d - Requested velocity %.2f rad/s is out of bounds (0 - %.2f rad/s)", id, velocity_rad_s, MAX_VELOCITY_RAD_S);
+        LOG_ERROR(TAG, "JOINT %d - Requested velocity %.2f rad/s is out of bounds (0 - %.2f rad/s)", id, velocity_rad_s, MAX_VELOCITY_RAD_S);
         return Error::InvalidParameters;
     }
     

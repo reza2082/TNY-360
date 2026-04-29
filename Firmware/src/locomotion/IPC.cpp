@@ -9,11 +9,13 @@ namespace IPC
 
     Error Init()
     {
+        LOG_SCOPE(TAG, "IPC::Init");
+        
         intent_queue = xQueueCreate(1, sizeof(ControlIntent));
 
         if (intent_queue == nullptr)
         {
-            Log::Add(Log::Level::Error, TAG, "Failed to create intent queue");
+            LOG_ERROR(TAG, "Failed to create intent queue");
             return Error::SoftwareFailure;
         }
 
@@ -29,7 +31,7 @@ namespace IPC
     {
         if (xQueueOverwrite(intent_queue, &intent) != pdPASS)
         {
-            Log::Add(Log::Level::Error, TAG, "Couldn't override intent in the intent queue");
+            LOG_ERROR(TAG, "Couldn't override intent in the intent queue");
             return Error::SoftwareFailure;
         }
         return Error::None;

@@ -39,29 +39,29 @@ Body::Body()
 
 Error Body::init()
 {
-    Error err;
+    LOG_SCOPE(TAG, "Body::Init");
 
     // Initialize the legs
     for (size_t i = 0; i < static_cast<size_t>(Leg::Index::COUNT); i++)
     {
-        if ((err = legs[i].init()) != Error::None)
+        if (Error err = legs[i].init(); err != Error::None)
         {
             return err;
         }
     }
-    
+
     // Initialize the ears
-    if ((err = ear_l.init()) != Error::None)
+    if (Error err = ear_l.init(); err != Error::None)
     {
         return err;
     }
-    if ((err = ear_r.init()) != Error::None)
+    if (Error err = ear_r.init(); err != Error::None)
     {
         return err;
     }
 
     // Initialize the IMU
-    if ((err = imu.init()) != Error::None)
+    if (Error err = imu.init(); err != Error::None)
     {
         return err;
     }
