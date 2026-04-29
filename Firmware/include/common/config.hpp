@@ -13,6 +13,7 @@ constexpr uint32_t CONTROL_INTENT_WATCHDOG_MS = 500;
 
 /** OTA SETUP **/
 constexpr const char* OTA_FIRMWARE_LATEST_URL = "https://api.tny-robotics.com/firmware/latest";
+constexpr const char* OTA_FILESYSTEM_DOWNLOAD_URL = "https://cdn.tny-robotics.com/firmware/tny-360/%s/filesystem.bin";
 constexpr int OTA_UPDATE_TIMEOUT_MS = 5000;
 constexpr int OTA_UPDATE_FILESYSTEM_BUFFER_SIZE = 4096; // in bytes
 constexpr const char* OTA_ROBOT_MODEL = "tny-360";
@@ -26,14 +27,14 @@ constexpr float HIP_POS_X_M = 0.075f; // in m
 constexpr float HIP_POS_Y_M = 0.050f; // in m
 
 /** DEFAULT POSE INFORMATIONS **/
-constexpr float  DEFAULT_BODY_HEIGHT_M = 0.120f; // in meters, from ground level
+constexpr float DEFAULT_BODY_HEIGHT_M   = 0.120f; // in meters, from ground level
 constexpr float DEFAULT_FEET_SPREAD_Y_M = 0.100f; // in meters, from body center
 constexpr float DEFAULT_FEET_SPREAD_X_M = 0.090f; // in meters, from body center
 
 
 /** LOGGING **/
 // Maximum number of log lines to store
-constexpr int LOG_MAX_LINES = 10;
+constexpr int LOG_MAX_LINES = 20;
 // Maximum length of each log message
 constexpr int LOG_MAX_MSG_LEN = 128;
 
@@ -70,11 +71,11 @@ constexpr uint8_t PROTOCOL_MAX_COMMANDS_HANDLERS = 255;
 
 /** I2C **/
 // Primary I2C GPIO pins (for critical modules, like sensors)
-constexpr gpio_num_t I2C_PRIMARY_SDA_GPIO_NUM = GPIO_NUM_47;
-constexpr gpio_num_t I2C_PRIMARY_SCL_GPIO_NUM = GPIO_NUM_21;
+constexpr gpio_num_t I2C_PRIMARY_SDA_GPIO_NUM = GPIO_NUM_21;
+constexpr gpio_num_t I2C_PRIMARY_SCL_GPIO_NUM = GPIO_NUM_47;
 // Secondary I2C GPIO pins (for less critical modules, like screens)
-constexpr gpio_num_t I2C_SECONDARY_SDA_GPIO_NUM = GPIO_NUM_38;
-constexpr gpio_num_t I2C_SECONDARY_SCL_GPIO_NUM = GPIO_NUM_45;
+constexpr gpio_num_t I2C_SECONDARY_SDA_GPIO_NUM = GPIO_NUM_9;
+constexpr gpio_num_t I2C_SECONDARY_SCL_GPIO_NUM = GPIO_NUM_48;
 
 
 /** Analog Readings **/
@@ -141,8 +142,8 @@ constexpr uint8_t JOINT_COUNT = 16; // 12 legs joints + 2 ears, but PCA9685 has 
 constexpr int SCREEN_REFRESH_RATE = 30;
 
 /** Buttons **/
-constexpr gpio_num_t BTN_LEFT_PIN = GPIO_NUM_10;
-constexpr gpio_num_t BTN_RIGHT_PIN = GPIO_NUM_11;
+constexpr gpio_num_t BTN_LEFT_PIN = GPIO_NUM_11;
+constexpr gpio_num_t BTN_RIGHT_PIN = GPIO_NUM_10;
 constexpr uint16_t BTN_LONG_PRESS_MS = 500; // ms
 // Buttons polling interval in milliseconds
 constexpr uint16_t BTN_POLL_INT_MS = 50; // ms

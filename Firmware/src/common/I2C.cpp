@@ -1,6 +1,7 @@
 #include "common/I2C.hpp"
 #include "common/Log.hpp"
 #include "common/config.hpp"
+#include "common/LED.hpp"
 
 namespace I2C
 {
@@ -13,6 +14,8 @@ namespace I2C
 
     Error Init()
     {
+        LOG_SCOPE(TAG, "I2C::Init");
+
         if (initialized) return Error::None;
 
         // First setup the primary I2C bus
@@ -25,7 +28,7 @@ namespace I2C
             .intr_priority = 0,
             .trans_queue_depth = 0, // no async transactions
             .flags = {
-                .enable_internal_pullup = true,
+                .enable_internal_pullup = false,
                 .allow_pd = false
             }
         };
@@ -33,7 +36,8 @@ namespace I2C
         if (i2c_new_master_bus(&primary_config, &handle_primary) != ESP_OK)
         {
             handle_primary = nullptr;
-            Log::Add(Log::Level::Error, TAG, "I2C: Failed to initialize primary I2C bus");
+            LOG_ERROR(TAG, "Failed to initialize primary I2C bus");
+            LED::LoopErrorCode(ErrorCode::I2cBusPrimaryInitFailed);
             return Error::Unknown;
         }
 
@@ -47,7 +51,7 @@ namespace I2C
             .intr_priority = 0,
             .trans_queue_depth = 0, // no async transactions
             .flags = {
-                .enable_internal_pullup = true,
+                .enable_internal_pullup = false,
                 .allow_pd = false
             }
         };
@@ -55,12 +59,12 @@ namespace I2C
         if (i2c_new_master_bus(&secondary_config, &handle_secondary) != ESP_OK)
         {
             handle_secondary = nullptr;
-            Log::Add(Log::Level::Error, TAG, "I2C: Failed to initialize secondary I2C bus");
+            LOG_ERROR(TAG, "Failed to initialize secondary I2C bus");
+            LED::LoopErrorCode(ErrorCode::I2cBusSecondaryInitFailed);
             return Error::Unknown;
         }
 
         initialized = true;
-
         return Error::None;
     }
 
