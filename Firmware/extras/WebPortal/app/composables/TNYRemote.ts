@@ -1,5 +1,5 @@
 import { sizeof, TimeoutError, Type, type CommandID } from "./utils"
-const toast = useToast();
+// const toast = useToast();
 
 export type TNYRemoteEvents = {
     connected: []
@@ -56,23 +56,23 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
 
         this.socket = new WebSocket(`ws://${host}:5621`);
 
-        const connectionToast = toast.add({
-            title: 'Connecting to TNY-360',
-            description: `Connecting to the robot with WebSockets, please wait ...`,
-            color: 'warning',
-            duration: 0 // Reste affiché en attendant la connexion
-        });
+        // const connectionToast = toast.add({
+        //     title: 'Connecting to TNY-360',
+        //     description: `Connecting to the robot with WebSockets, please wait ...`,
+        //     color: 'warning',
+        //     duration: 0 // Reste affiché en attendant la connexion
+        // });
 
         this.socket.addEventListener('open', () => {
             this.emit('connected');
             this.connected = true;
 
-            toast.update(connectionToast.id, {
-                title: 'Connected to TNY-360!',
-                description: 'Connected through WebSockets!',
-                color: 'success',
-                duration: 2000
-            });
+            // toast.update(connectionToast.id, {
+            //     title: 'Connected to TNY-360!',
+            //     description: 'Connected through WebSockets!',
+            //     color: 'success',
+            //     duration: 2000
+            // });
 
             // DEV mode : store ip in localstorage for next session
             if (import.meta.dev) {
@@ -126,6 +126,7 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
                     case Type.FLOAT: outputs.push(view.getFloat32(offset, true)); break;
                     case Type.DOUBLE: outputs.push(view.getFloat64(offset, true)); break;
                     case Type.BOOL:  outputs.push(!!view.getUint8(offset)); break;
+                    case Type.STRING64: for (let i = 0; i < 64; i++) outputs.push(String.fromCharCode(view.getUint8(offset))); break;
                     default: throw new Error(`Unknown type: ${type}`);
                 }
                 offset += sizeof(type);
@@ -137,7 +138,7 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
         this.socket.addEventListener('error', (event) => {
             // DEV mode ? Then search IP in localstorage, if none, ask user for one.
             if (import.meta.dev) {
-                toast.remove(connectionToast.id);
+                // toast.remove(connectionToast.id);
                 // If there's an ip stored in localstorage, try connecting to it.
                 // if there's none, ask the user for one.
                 const devIp = localStorage.getItem('dev-ip');
@@ -155,12 +156,12 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
                     localStorage.removeItem('dev-ip');
                 }
             } else {
-                toast.update(connectionToast.id, {
-                    title: 'Failed to connnect!',
-                    description: 'Sorry, something went wrong ...',
-                    color: 'error',
-                    duration: 4000
-                });
+                // toast.update(connectionToast.id, {
+                //     title: 'Failed to connnect!',
+                //     description: 'Sorry, something went wrong ...',
+                //     color: 'error',
+                //     duration: 4000
+                // });
             }
 
             this.emit('error');
@@ -214,7 +215,8 @@ export class TNYRemote extends EventEmitter<TNYRemoteEvents> {
                     case Type.FLOAT: view.setFloat32(offset, value, true); break;
                     case Type.DOUBLE: view.setFloat64(offset, value, true); break;
                     case Type.BOOL:  view.setUint8(offset, value ? 1 : 0); break;
-                    default: return reject(new Error(`Unknown type: ${type}`));
+                    case Type.STRING64: for (let i = 0; i < 64; i++) view.setUint8(offset+i, value.charCodeAt(i)); break;
+                    default: return reject(new Error(`Send command - Unknown type: ${type}`));
                 }
                 offset += sizeof(type);
             }

@@ -102,6 +102,9 @@ export class TNY360Remote {
             return args[0] as number;
         });
     }
+    public connectToAP(ssid: string, password: string): Promise<void> {
+        return this.remote.send(0x0C, [Type.STRING64, Type.STRING64], [], [ssid, password]).then((args) => {});
+    }
 
 
     public getJointState(jointIndex: number): Promise<boolean> {

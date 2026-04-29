@@ -192,4 +192,30 @@ Protocol::CommandHandler systems[] = {
         memcpy(payload, &temperature, sizeof(float));
         resolve(Protocol::Response(req.id, true, payload, sizeof(float)));
     }},
+    // Connect to AP
+    { 0x0C, sizeof(char)*64 + sizeof(char)*64, [](const Protocol::Request& req, Protocol::CallbackResolver resolve) {
+        BinaryReader reader(req.payload, req.len);
+
+        char ssid[64];
+        if (Error err = reader.readBytes((uint8_t*) ssid, 64); err != Error::None)
+        {
+            resolve(Protocol::Response(req.id, false));
+            return;
+        }
+        char password[64];
+        if (Error err = reader.readBytes((uint8_t*) password, 64); err != Error::None)
+        {
+            resolve(Protocol::Response(req.id, false));
+            return;
+        }
+
+        WiFiManager& wifi = Robot::GetInstance().getNetworkManager().getWiFiManager();
+        if (Error err = wifi.connect(ssid, password); err != Error::None)
+        {
+            resolve(Protocol::Response(req.id, false));
+            return;
+        }
+
+        resolve(Protocol::Response(req.id, true));
+    }},
 };

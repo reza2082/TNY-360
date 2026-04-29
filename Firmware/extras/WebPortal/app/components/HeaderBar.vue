@@ -18,7 +18,7 @@
     </div>
     <UModal v-model:open="settingsModalOpen" :title="'Settings'" :fullscreen="true">
         <template #body>
-            Settings
+            <SettingsModal />
         </template>
     </UModal>
 </template>

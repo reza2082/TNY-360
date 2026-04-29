@@ -9,6 +9,7 @@ export enum Type {
     FLOAT = 'float',
     DOUBLE = 'double',
     BOOL = 'bool',
+    STRING64 = 'string64',
 };
 export function sizeof(type: Type|Type[]): number {
     if (Array.isArray(type)) {
@@ -24,6 +25,7 @@ export function sizeof(type: Type|Type[]): number {
         case Type.FLOAT: return 4;
         case Type.DOUBLE: return 8;
         case Type.BOOL:  return 1;
+        case Type.STRING64: return 64;
         default: throw new Error(`Unknown type: ${type}`);
     }
 }
