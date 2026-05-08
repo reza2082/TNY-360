@@ -5,6 +5,8 @@
 
 Error DecisionLoop::init()
 {
+    // ErrorHandle(ErrorStruct::DecisionLoopInitFailed);
+    // FIXME : Maybe we should create the task here and just keep it suspended until start() is called
     return Error::None;
 }
 

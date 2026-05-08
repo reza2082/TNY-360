@@ -25,6 +25,7 @@ Error Protocol::Init()
     Joint::Register(dispatcher);
     Motor::Register(dispatcher);
     IMU::Register(dispatcher);
+    // ErrorHandle(ErrorStruct::ProtocolInitFailed);
     return Error::None;
 }
 

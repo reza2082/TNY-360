@@ -18,6 +18,7 @@ namespace IPC
         if (intent_queue == nullptr || state_queue == nullptr)
         {
             LOG_ERROR(TAG, "Failed to create queues for IPC");
+            ErrorHandle(ErrorStruct::IPCInitFailed);
             return Error::SoftwareFailure;
         }
 

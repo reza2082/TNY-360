@@ -15,7 +15,6 @@ Error IMU::init()
     
     if (Error err = IMUDriver::Init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::IMUInitFailed);
         return err;
     }
     return Error::None;

@@ -57,7 +57,7 @@ void MenuError::onUpdate()
     
 }
 
-void MenuError::setError(ErrorStruct err)
+void MenuError::setError(ErrorStruct::ErrorStruct err)
 {
     error = err;
 }

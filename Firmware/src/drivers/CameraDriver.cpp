@@ -162,6 +162,7 @@ Error CameraDriver::init()
     esp_err_t err = esp_camera_init(&camera_config);
     if (err != ESP_OK) {
         LOG_ERROR(TAG, "Camera init failed with error 0x%x", err);
+        ErrorHandle(ErrorStruct::CameraInitFailed);
         return Error::HardwareFailure;
     }
 
@@ -170,6 +171,7 @@ Error CameraDriver::init()
     if (sensor == nullptr)
     {
         LOG_ERROR(TAG, "esp_camera_sensor_get returned nullptr");
+        ErrorHandle(ErrorStruct::CameraInitFailed);
         return Error::Unknown;
     }
     sensor->set_vflip(sensor, true);
@@ -206,6 +208,7 @@ Error CameraDriver::start()
     {
         server = nullptr;
         LOG_ERROR(TAG, "Failed to start web server");
+        ErrorHandle(ErrorStruct::CameraServerInitFailed);
         return Error::SoftwareFailure;
     }
 
@@ -221,6 +224,7 @@ Error CameraDriver::start()
     if (esp_err_t err = httpd_register_uri_handler(server, &catch_all_uri); err != ESP_OK)
     {
         LOG_ERROR(TAG, "Unable to register URI handler : Error 0x%0x", err);
+        ErrorHandle(ErrorStruct::CameraServerInitFailed);
         return Error::SoftwareFailure;
     }
 

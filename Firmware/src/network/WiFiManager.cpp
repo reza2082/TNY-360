@@ -111,20 +111,21 @@ Error WiFiManager::init()
 {
     LOG_SCOPE(TAG, "WiFiManager::init");
 
-    if (NVS::Init() != Error::None)
+    if (Error err = NVS::Init(); err != Error::None)
     {
-        LOG_ERROR(TAG, "NVS initialization failed");
-        return Error::SoftwareFailure;
+        return err;
     }
 
     if (esp_netif_init() != ESP_OK)
     {
         LOG_ERROR(TAG, "esp_netif_init failed");
+        ErrorHandle(ErrorStruct::WiFiInitFailed);
         return Error::SoftwareFailure;
     }
     if (esp_event_loop_create_default() != ESP_OK)
     {
         LOG_ERROR(TAG, "esp_event_loop_create_default failed");
+        ErrorHandle(ErrorStruct::WiFiInitFailed);
         return Error::SoftwareFailure;
     }
 
@@ -136,6 +137,7 @@ Error WiFiManager::init()
     if (esp_wifi_init(&cfg) != ESP_OK)
     {
         LOG_ERROR(TAG, "esp_wifi_init failed");
+        ErrorHandle(ErrorStruct::WiFiInitFailed);
         return Error::SoftwareFailure;
     }
 
@@ -143,15 +145,22 @@ Error WiFiManager::init()
     if (esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, this) != ESP_OK)
     {
         LOG_ERROR(TAG, "Failed to register WiFi event handler");
+        ErrorHandle(ErrorStruct::WiFiInitFailed);
         return Error::SoftwareFailure;
     }
     if (esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, this) != ESP_OK)
     {
         LOG_ERROR(TAG, "Failed to register IP event handler");
+        ErrorHandle(ErrorStruct::WiFiInitFailed);
         return Error::SoftwareFailure;
     }
 
-    if (Error err = NVS::Open("WiFi", &nvs_handle_ptr); err != Error::None) return err;
+    if (Error err = NVS::Open("WiFi", &nvs_handle_ptr); err != Error::None)
+    {
+        LOG_ERROR(TAG, "Failed to open NVS namespace for WiFi: %d", static_cast<int>(err));
+        ErrorHandle(ErrorStruct::WiFiInitFailed);
+        return err;
+    }
     
     if (nvs_handle_ptr->get("ssid", ssid, sizeof(ssid)) != Error::None)
     {
@@ -177,7 +186,8 @@ Error WiFiManager::init()
         strcpy(password, WIFI_AP_PASSWORD);
         if (Error err = __create_ap(); err != Error::None)
         {
-            LOG_ERROR(TAG, "Create AP Failed, returning init error");
+            LOG_ERROR(TAG, "Create AP Failed");
+            ErrorHandle(ErrorStruct::WiFiInitFailed);
             return err;
         }
     }

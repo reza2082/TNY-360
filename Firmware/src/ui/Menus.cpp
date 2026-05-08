@@ -155,9 +155,9 @@ namespace Menus
     Error Init()
     {
         // setup button callbacks
-        if (Button::Init() != Error::None)
+        if (Error err = Button::Init(); err != Error::None)
         {
-            return Error::Unknown;
+            return err;
         }
 
         Button::SetCallbacks({
@@ -179,6 +179,7 @@ namespace Menus
         TaskHandle_t xTaskHandle = nullptr;
         if (xTaskCreate(update_task, "updateMenu", 8192, nullptr, 1, &xTaskHandle) != pdPASS)
         {
+            ErrorHandle(ErrorStruct::MenusInitFailed);
             return Error::Unknown;
         }
 

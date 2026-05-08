@@ -56,13 +56,11 @@ namespace BootManager
         if (Error err = ScreenDriver::Init(); err != Error::None)
         {
             LOG_ERROR(TAG, "Failed to initialize ScreenDriver module");
-            LED::LoopErrorCode(ErrorCode::ScreenInitFailed);
             return;
         }
         if (Error err = Menus::Init(); err != Error::None)
         {
             LOG_ERROR(TAG, "Failed to initialize Menus module");
-            LED::LoopErrorCode(ErrorCode::ScreenInitFailed);
             return;
         }
 
@@ -73,7 +71,6 @@ namespace BootManager
         if (Error err = MotorDriver::Init(); err != Error::None)
         {
             LOG_ERROR(TAG, "Failed to initialize MotorDriver module");
-            ErrorHandle(ErrorStruct::DriverInitFailed);
             return;
         }
 

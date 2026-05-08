@@ -69,12 +69,14 @@ namespace Button
         if (gpio_config(&io_conf) != ESP_OK)
         {
             LOG_ERROR(TAG, "Buttons: Failed to configure GPIO pins");
+            ErrorHandle(ErrorStruct::ButtonsInitFailed);
             return Error::Unknown;
         }
 
         if (xTaskCreate(update_task, "Buttons::update_task", 8192, nullptr, tskIDLE_PRIORITY + 1, nullptr) != pdPASS)
         {
             LOG_ERROR(TAG, "Buttons: Failed to create Buttons update task");
+            ErrorHandle(ErrorStruct::ButtonsInitFailed);
             return Error::Unknown;
         }
 

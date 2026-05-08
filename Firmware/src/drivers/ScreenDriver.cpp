@@ -1,6 +1,7 @@
 #include "drivers/ScreenDriver.hpp"
 #include "common/I2C.hpp"
 #include "common/Log.hpp"
+#include "common/LED.hpp"
 #include "esp_lcd_panel_sh1106.h"
 #include <esp_lcd_io_i2c.h>
 #include <esp_lcd_panel_io.h>
@@ -50,6 +51,7 @@ namespace ScreenDriver
         if (esp_err_t err = esp_lcd_new_panel_io_i2c(I2C::handle_secondary, &io_config, &io_handle); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Couldn't create panel IO");
+            ErrorHandle(ErrorStruct::ScreenInitFailed);
             return Error::SoftwareFailure;
         }
 
@@ -66,16 +68,19 @@ namespace ScreenDriver
         if (esp_err_t err = esp_lcd_new_panel_sh1106(io_handle, &panel_config, &panel_handle); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Couldn't create sh1106 panel");
+            ErrorHandle(ErrorStruct::ScreenInitFailed);
             return Error::SoftwareFailure;
         }
         if (esp_err_t err = esp_lcd_panel_reset(panel_handle); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Couln't reset panel");
+            ErrorHandle(ErrorStruct::ScreenInitFailed);
             return Error::SoftwareFailure;
         }
         if (esp_err_t err = esp_lcd_panel_init(panel_handle); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Couldn't init panel");
+            ErrorHandle(ErrorStruct::ScreenInitFailed);
             return Error::SoftwareFailure;
         }
 
@@ -85,6 +90,7 @@ namespace ScreenDriver
         if (esp_err_t err = esp_lcd_panel_disp_on_off(panel_handle, true); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Couldn't turn the display on");
+            ErrorHandle(ErrorStruct::ScreenInitFailed);
             return Error::SoftwareFailure;
         }
         

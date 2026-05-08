@@ -27,6 +27,7 @@ Error SoundMixer::init()
     if (ret != pdPASS)
     {
         LOG_ERROR(TAG, "Failed to create SoundMixer task");
+        ErrorHandle(ErrorStruct::MixerInitFailed);
         return Error::SoftwareFailure;
     }
 

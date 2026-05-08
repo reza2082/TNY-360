@@ -37,7 +37,7 @@ namespace I2C
         {
             handle_primary = nullptr;
             LOG_ERROR(TAG, "Failed to initialize primary I2C bus");
-            LED::LoopErrorCode(ErrorCode::I2cBusPrimaryInitFailed);
+            ErrorHandle(ErrorStruct::I2cBusPrimaryInitFailed);
             return Error::Unknown;
         }
 
@@ -60,7 +60,7 @@ namespace I2C
         {
             handle_secondary = nullptr;
             LOG_ERROR(TAG, "Failed to initialize secondary I2C bus");
-            LED::LoopErrorCode(ErrorCode::I2cBusSecondaryInitFailed);
+            ErrorHandle(ErrorStruct::I2cBusSecondaryInitFailed);
             return Error::Unknown;
         }
 

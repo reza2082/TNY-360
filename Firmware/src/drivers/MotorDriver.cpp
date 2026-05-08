@@ -24,6 +24,7 @@ namespace MotorDriver
         if (Error err = I2C::Init(); err != Error::None)
         {
             LOG_ERROR(TAG, "Failed to initialize I2C for motor driver");
+            ErrorHandle(ErrorStruct::DriverInitFailed);
             return err;
         }
 
@@ -37,6 +38,7 @@ namespace MotorDriver
             if (err != ESP_OK)
             {
                 LOG_ERROR(TAG, "Failed to create PCA9685 handle");
+                ErrorHandle(ErrorStruct::DriverInitFailed);
                 return Error::HardwareFailure;
             }
         }
@@ -50,6 +52,7 @@ namespace MotorDriver
             if (err != ESP_OK)
             {
                 LOG_ERROR(TAG, "Failed to configure PCA9685");
+                ErrorHandle(ErrorStruct::DriverInitFailed);
                 return Error::HardwareFailure;
             }
         }
@@ -60,6 +63,7 @@ namespace MotorDriver
             if (err != ESP_OK)
             {
                 LOG_ERROR(TAG, "Failed to wake up PCA9685");
+                ErrorHandle(ErrorStruct::DriverInitFailed);
                 return Error::HardwareFailure;
             }
         }

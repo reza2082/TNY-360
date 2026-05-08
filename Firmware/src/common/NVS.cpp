@@ -72,6 +72,7 @@ namespace NVS
             LOG_WARNING(TAG, "NVS flash init failed, erasing and retrying...");
             if (nvs_flash_erase() != ESP_OK) {
                 LOG_ERROR(TAG, "Failed to erase NVS flash");
+                ErrorHandle(ErrorStruct::NVSInitFailed);
                 return Error::SoftwareFailure;
             }
             ret = nvs_flash_init();
@@ -80,6 +81,7 @@ namespace NVS
         if (ret != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to initialize NVS flash");
+            ErrorHandle(ErrorStruct::NVSInitFailed);
             return Error::SoftwareFailure;
         }
 

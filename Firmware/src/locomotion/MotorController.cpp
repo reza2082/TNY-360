@@ -28,13 +28,11 @@ Error MotorController::init()
 
     if (Error err = MotorDriver::Init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::DriverInitFailed);
         state = State::ERROR;
         return err;
     }
     if (Error err = AnalogDriver::Init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::ReaderInitFailed);
         state = State::ERROR;
         return err;
     }
@@ -50,6 +48,8 @@ Error MotorController::init()
     if (Error err = NVS::Open(key, &nvshandle_ptr); err != Error::None)
     {
         state = State::ERROR;
+        LOG_ERROR(TAG, "Failed to open NVS handle for motor channel %d with error [%s]", motor_channel, ErrorToString(err));
+        ErrorHandle(ErrorStruct::MotorControllerInitFailed);
         return err;
     }
     if (nvshandle_ptr->get("calib_data", calibration_data) == Error::None)

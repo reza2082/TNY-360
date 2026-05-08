@@ -14,19 +14,16 @@ Error UIManager::init()
 {
     if (Error err = ScreenDriver::Init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::ScreenInitFailed);
         return err;
     }
 
     if (Error err = Menus::Init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::MenusInitFailed);
         return err;
     }
 
     if (Error err = camera.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::CameraInitFailed);
         // not critical, we can still use the ui without camera features
     }
     

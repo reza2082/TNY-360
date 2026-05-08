@@ -8,13 +8,11 @@ Error AudioManager::init()
 {
     if (Error err = speaker.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::SpeakerInitFailed);
         return err;
     }
 
     if (Error err = mixer.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::MixerInitFailed);
         return err;
     }
 

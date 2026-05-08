@@ -71,6 +71,7 @@ Error ControlLoop::init()
     if (err != pdPASS)
     {
         LOG_ERROR(TAG, "Failed to create timer task");
+        ErrorHandle(ErrorStruct::ControlLoopInitFailed);
         return Error::SoftwareFailure;
     }
 

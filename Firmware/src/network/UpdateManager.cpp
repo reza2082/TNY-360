@@ -22,12 +22,12 @@ Error UpdateManager::init()
     // Initialize and get NVS handle
     if (Error err = NVS::Init(); err != Error::None)
     {
-        LOG_ERROR(TAG, "Failed to initialize NVS: %d", static_cast<int>(err));
         return err;
     }
     if (Error err = NVS::Open("updt_mngr", &nvsHandle_ptr); err != Error::None)
     {
         LOG_ERROR(TAG, "Failed to open NVS namespace: %d", static_cast<int>(err));
+        ErrorHandle(ErrorStruct::UpdateInitFailed);
         return err;
     }
 

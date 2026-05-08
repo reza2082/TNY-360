@@ -30,6 +30,7 @@ namespace LittleFS
 
         if (ret != ESP_OK) {
             LOG_ERROR(TAG, "Failed to mount LittleFS");
+            ErrorHandle(ErrorStruct::FileSystemInitFailed);
             return Error::Unknown;
         }
 

@@ -101,6 +101,7 @@ namespace RPC
 
         if (rpcRequestQueue == nullptr || rpcResponseQueue == nullptr) {
             LOG_ERROR(TAG, "Failed to create RPC queues");
+            ErrorHandle(ErrorStruct::RPCInitFailed);
             return Error::Unknown; // Remplace par ton code d'erreur
         }
 
@@ -108,6 +109,7 @@ namespace RPC
         if (xTaskCreatePinnedToCore(core0_task_func, "RPC_Core0", 4096, nullptr, tskIDLE_PRIORITY + 5, &core0_executor_task, CORE_BRAIN) != pdPASS)
         {
             LOG_ERROR(TAG, "Error creating Core0 thread safe executor");
+            ErrorHandle(ErrorStruct::RPCInitFailed);
             return Error::Unknown;
         }
         

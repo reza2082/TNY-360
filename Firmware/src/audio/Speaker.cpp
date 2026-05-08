@@ -19,6 +19,7 @@ Error Speaker::init()
     if (esp_err_t err = i2s_new_channel(&chan_cfg, &tx_handle, NULL); err != ESP_OK)
     {
         LOG_ERROR(TAG, "Failed to create I2S channel: %s", esp_err_to_name(err));
+        ErrorHandle(ErrorStruct::SpeakerInitFailed);
         return Error::SoftwareFailure;
     }
 
@@ -40,6 +41,7 @@ Error Speaker::init()
     if (esp_err_t err = i2s_channel_init_pdm_tx_mode(tx_handle, &pdm_tx_cfg); err != ESP_OK)
     {
         LOG_ERROR(TAG, "Failed to init PDM TX mode: %s", esp_err_to_name(err));
+        ErrorHandle(ErrorStruct::SpeakerInitFailed);
         return Error::SoftwareFailure;
     }
 
@@ -47,6 +49,7 @@ Error Speaker::init()
     if (esp_err_t err = i2s_channel_enable(tx_handle); err != ESP_OK)
     {
         LOG_ERROR(TAG, "Failed to enable I2S channel: %s", esp_err_to_name(err));
+        ErrorHandle(ErrorStruct::SpeakerInitFailed);
         return Error::SoftwareFailure;
     }
 

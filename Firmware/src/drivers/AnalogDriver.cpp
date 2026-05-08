@@ -48,6 +48,7 @@ namespace AnalogDriver
         if (gpio_config(&io_conf) != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to configure GPIO for select pins");
+            ErrorHandle(ErrorStruct::ReaderInitFailed);
             return Error::Unknown;
         }
 
@@ -60,6 +61,7 @@ namespace AnalogDriver
         if (adc_oneshot_new_unit(&init_config, &adc_handle) != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to create ADC oneshot handle");
+            ErrorHandle(ErrorStruct::ReaderInitFailed);
             return Error::Unknown;
         }
 
@@ -71,6 +73,7 @@ namespace AnalogDriver
         if (adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_1, &config) != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to configure ADC oneshot channel");
+            ErrorHandle(ErrorStruct::ReaderInitFailed);
             return Error::Unknown;
         }
 

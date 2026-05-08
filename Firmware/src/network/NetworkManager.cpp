@@ -14,39 +14,35 @@ Error NetworkManager::init()
     // Initialize the WiFi manager
     if (Error err = wifi_manager.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::WiFiInitFailed);
         return err;
     }
 
     // Initialize the web interface
     if (Error err = web_interface.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::WebInterfaceInitFailed);
         return err;
     }
 
     // Initialize the websocket server
     if (Error err = web_socket.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::WebSocketInitFailed);
         return err;
     }
 
     // Initialize the update manager
     if (Error err = update_manager.init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::UpdateInitFailed);
         return err;
     }
 
     // Initialize the protocol system
     if (Error err = Protocol::Init(); err != Error::None)
     {
-        ErrorHandle(ErrorStruct::ProtocolInitFailed);
         return err;
     }
 
-    // Start the camera server
+    // Initialize the camera server
+    // FIXME : The method name shouldn't be start but something like initServer
     if (Error err = Robot::GetInstance().getUIManager().getCamera().start(); err != Error::None)
     {
         return err;

@@ -26,6 +26,7 @@ namespace IMUDriver
         if (esp_err_t err = mpu6050_create(I2C::handle_primary, mpu_info, &mpu_handle); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to create MPU6050 handle");
+            ErrorHandle(ErrorStruct::IMUInitFailed);
             return Error::HardwareFailure;
         }
 
@@ -34,12 +35,14 @@ namespace IMUDriver
         if (esp_err_t err = mpu6050_config(mpu_handle, mpu_config); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to configure MPU6050");
+            ErrorHandle(ErrorStruct::IMUInitFailed);
             return Error::HardwareFailure;
         }
 
         if (esp_err_t err = mpu6050_wake_up(mpu_handle); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to wake up MPU6050");
+            ErrorHandle(ErrorStruct::IMUInitFailed);
             return Error::HardwareFailure;
         }
 

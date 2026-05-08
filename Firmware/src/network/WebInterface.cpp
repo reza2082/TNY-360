@@ -30,16 +30,17 @@ Error WebInterface::init()
     {
         server = nullptr;
         LOG_ERROR(TAG, "Failed to start web server");
+        ErrorHandle(ErrorStruct::WebInterfaceInitFailed);
         return Error::Unknown;
     }
     running = true;
 
     if (Error err = LittleFS::Init(); err != Error::None)
     {
-        LOG_ERROR(TAG, "Failed to initialize LittleFS");
         return err;
     }
 
+    // FIXME : Should get the errors from here and handle them
     registerURIHandlers();
     return Error::None;
 }
