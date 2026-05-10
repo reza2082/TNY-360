@@ -156,7 +156,6 @@ esp_err_t WebInterface::main_request_handler(httpd_req_t *req)
     {
         if (strstr(host_header, my_ip) == NULL && strstr(host_header, "localhost") == NULL)
         {
-            LOG_DEBUG(TAG, "Detected captive portal request! Sending 302 redirect to %s", my_ip);
             char redirect_url[64];
             snprintf(redirect_url, sizeof(redirect_url), "http://%s/", my_ip);
             httpd_resp_set_status(req, "302 Found");

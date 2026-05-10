@@ -13,6 +13,8 @@ struct FeedbackInversionParams
     MotorDriver::Value pwm_delta = MotorDriver::MS_TO_PWM(0.2);
     /// @brief Motor's feedback noise (to detect if pwm_delta isn't big enough)
     AnalogDriver::Value feedback_noise;
+    /// @brief Number of subsamples to take for each sample
+    uint16_t nb_subsamples = 10;
     /// @brief Number of ms to wait after moving motor to center
     int base_delay_ms = 500;
     /// @brief Number of ms to wait between a movement and the feedback sampling
@@ -31,6 +33,9 @@ struct FeedbackInversionParams
  */
 Error check_feedback_inversion(FeedbackInversionParams params, MotorDriver::Channel motor_channel, AnalogDriver::Channel analog_channel, bool& out_value)
 {
+    AnalogDriver::internal::select(analog_channel);
+    vTaskDelay(pdMS_TO_TICKS(1)); // Ensure stabilization
+
     // Move the motor to center and wait a bit
     RETURN_ERROR(MotorDriver::SetPWM(motor_channel, params.pwm_center));
     RETURN_ERROR(MotorDriver::SendData());
@@ -41,8 +46,7 @@ Error check_feedback_inversion(FeedbackInversionParams params, MotorDriver::Chan
     RETURN_ERROR(MotorDriver::SetPWM(motor_channel, params.pwm_center + params.pwm_delta));
     RETURN_ERROR(MotorDriver::SendData());
     vTaskDelay(pdMS_TO_TICKS(params.feedback_delay_ms));
-    RETURN_ERROR(AnalogDriver::ReadAllChannels());
-    RETURN_ERROR(AnalogDriver::GetVoltage(analog_channel, feedback_forward));
+    RETURN_ERROR(AnalogDriver::internal::read_subsampled(feedback_forward, params.nb_subsamples));
     vTaskDelay(pdMS_TO_TICKS(params.movement_delay_ms));
 
     // Move forward, wait a bit, and take feedback
@@ -50,18 +54,19 @@ Error check_feedback_inversion(FeedbackInversionParams params, MotorDriver::Chan
     RETURN_ERROR(MotorDriver::SetPWM(motor_channel, params.pwm_center - params.pwm_delta));
     RETURN_ERROR(MotorDriver::SendData());
     vTaskDelay(pdMS_TO_TICKS(params.feedback_delay_ms));
-    RETURN_ERROR(AnalogDriver::ReadAllChannels());
-    RETURN_ERROR(AnalogDriver::GetVoltage(analog_channel, feedback_backward));
+    RETURN_ERROR(AnalogDriver::internal::read_subsampled(feedback_backward, params.nb_subsamples));
     vTaskDelay(pdMS_TO_TICKS(params.movement_delay_ms));
+
+    LOG_DEBUG("feedback_inversion", "Feedback forward: %.3f V, backward: %.3f V, diff: %.3f V", feedback_forward, feedback_backward, feedback_forward - feedback_backward);
 
     // Compare feedbacks and return result
     AnalogDriver::Value abs_diff = std::abs(feedback_forward - feedback_backward);
     if (abs_diff <= params.feedback_noise)
     {
-        LOG_ERROR("feedback_forward", "Feedback noise (%dmV) is greater than forward/backward difference (%dmV). Check wiring and noise levels", params.feedback_noise, abs_diff);
+        LOG_ERROR("feedback_inversion", "Feedback noise (%.3f V) is greater than forward/backward difference (%.3f V). Check wiring and noise levels", params.feedback_noise, abs_diff);
         return Error::HardwareFailure;
     }
 
-    out_value = feedback_forward > feedback_backward;
+    out_value = feedback_forward < feedback_backward;
     return Error::None;
 }

@@ -187,7 +187,7 @@ private:
     float calibration_progress;
     
     State state;
-    float target_position;
+    float target_position = 0;
     NVS::Handle* nvshandle_ptr;
 
     TaskHandle_t calibration_task_handle;

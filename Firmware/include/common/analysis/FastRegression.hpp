@@ -17,7 +17,7 @@ public:
      * @param x_val The x value (independent variable).
      * @param y_val The y value (dependent variable).
      */
-    void addPoint(uint16_t x_val, int y_val);
+    void addPoint(float x_val, float y_val);
 
     /**
      * @brief Computes the linear regression parameters.
@@ -30,9 +30,9 @@ public:
 
 private:
     uint16_t n = 0;        // Point counter
-    int64_t sum_x = 0;     // X sum
-    int64_t sum_y = 0;     // Y sum
-    int64_t sum_x_sq = 0;  // X squared sum
-    int64_t sum_y_sq = 0;  // Y squared sum (for standard deviation)
-    int64_t sum_xy = 0;    // X*Y product sum
+    double sum_x = 0;     // X sum
+    double sum_y = 0;     // Y sum
+    double sum_x_sq = 0;  // X squared sum
+    double sum_y_sq = 0;  // Y squared sum (for standard deviation)
+    double sum_xy = 0;    // X*Y product sum
 };

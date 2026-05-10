@@ -28,8 +28,7 @@ namespace Body
             {
                 bool isEnabled = (enabledFlag & (1 << i)) != 0;
                 Joint* joint = Joint::GetJoint((Joint::Id) i);
-                if (joint == nullptr)
-                    continue;
+                if (joint == nullptr) continue;
                 if (isEnabled) err = joint->enable();
                 else err = joint->disable();
                 if (err != Error::None) return err;
@@ -40,13 +39,11 @@ namespace Body
                 ctx.respond(ResponseStatus::InvalidParameters);
             else ctx.respond(ResponseStatus::Ok);
         });
-
-        ctx.respond(ResponseStatus::Ok);
     }
 
     static void GetEnabled(const RequestContext& ctx, const uint8_t* payload)
     {
-        RPC::ExecuteThreadSafe<uint16_t>([&ctx]() {
+        RPC::ExecuteThreadSafe<uint16_t>([]() {
             uint16_t enabledFlag = 0;
             for (int i = 0; i < (int) Joint::Id::Count; i++)
             {

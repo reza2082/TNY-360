@@ -6,7 +6,7 @@
 #include "ui/Menus.hpp"
 #include "ui/Draw.hpp"
 #include "ui/Icons.hpp"
-#include "boot/MenuCalibration.hpp"
+#include "boot/MenuBootCalibration.hpp"
 #include "drivers/ScreenDriver.hpp"
 #include "drivers/MotorDriver.hpp"
 #include "locomotion/MotorController.hpp"
@@ -126,7 +126,7 @@ namespace BootManager
         }
 
         // Show calibration menu
-        MenuCalibration menu;
+        MenuBootCalibration menu;
         Menus::SetCurrentMenu(&menu);
 
         // infinite loop to keep menu variable alive

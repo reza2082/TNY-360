@@ -228,7 +228,7 @@ Error ControlLoop::control_task()
     /// Store the state in the IPC to be read by the Brain core (we don't check return error here, no time to manage them)
     IPC::RobotState state;
     state.timestamp_ms = current_time;
-    for (int i = 0; i < IPC::NB_JOINTS; i++)
+    for (int i = 0; i < (int) Joint::Id::Count; i++)
     {
         Joint::Id joint_id = static_cast<Joint::Id>(i);
         Joint* joint = Joint::GetJoint(joint_id);
@@ -278,6 +278,12 @@ Error ControlLoop::control_task()
     if (Error err = kinematics_engine.computeBodyIK(cartesian_state, joint_state); err != Error::None)
     {
         LOG_ERROR(TAG, "KinematicsEngine failed to calculate body IK");
+        // LOG_DEBUG(TAG, "Body position = (%2.1f, %2.1f, %2.1f)", cartesian_state.body_pos.x, cartesian_state.body_pos.y, cartesian_state.body_pos.z);
+        // LOG_DEBUG(TAG, "Body rotation = (%2.1f, %2.1f, %2.1f)", cartesian_state.body_rot.x, cartesian_state.body_rot.y, cartesian_state.body_rot.z);
+        // LOG_DEBUG(TAG, "Feet FL position = (%2.1f, %2.1f, %2.1f)", cartesian_state.legs[(int) Leg::Id::FrontLeft].target_pos.x, cartesian_state.legs[(int) Leg::Id::FrontLeft].target_pos.y, cartesian_state.legs[(int) Leg::Id::FrontLeft].target_pos.z);
+        // LOG_DEBUG(TAG, "Feet BL position = (%2.1f, %2.1f, %2.1f)", cartesian_state.legs[(int) Leg::Id::BackLeft].target_pos.x, cartesian_state.legs[(int) Leg::Id::BackLeft].target_pos.y, cartesian_state.legs[(int) Leg::Id::BackLeft].target_pos.z);
+        // LOG_DEBUG(TAG, "Feet BR position = (%2.1f, %2.1f, %2.1f)", cartesian_state.legs[(int) Leg::Id::BackRight].target_pos.x, cartesian_state.legs[(int) Leg::Id::BackRight].target_pos.y, cartesian_state.legs[(int) Leg::Id::BackRight].target_pos.z);
+        // LOG_DEBUG(TAG, "Feet FR position = (%2.1f, %2.1f, %2.1f)", cartesian_state.legs[(int) Leg::Id::FrontRight].target_pos.x, cartesian_state.legs[(int) Leg::Id::FrontRight].target_pos.y, cartesian_state.legs[(int) Leg::Id::FrontRight].target_pos.z);
         return err;
     }
 
@@ -335,7 +341,7 @@ Error ControlLoop::control_task()
     perf_controltask.stop();
     if (perf_counter++ == CONTROL_LOOP_FREQ_HZ)
     {
-        avg_ms = perf_controltask.get_avg_ms(CONTROL_LOOP_FREQ_HZ);
+        avg_ms = perf_controltask.get_avg_ms();
         LOG_DEBUG(TAG, "Control loop average execution time : %.2f ms", avg_ms);
         perf_controltask.reset();
         perf_counter = 0;

@@ -169,9 +169,9 @@ private:
     float max_angle_rad;
     bool inverted;
     float target_angle_rad;
-    float feedback_angle_rad;
-    float estimate_angle_rad;
-    float model_angle_rad;
+    float feedback_angle_rad = 0;
+    float estimate_angle_rad = 0;
+    float model_angle_rad = 0;
     float velocity_rad_s;
     bool has_feedback;
 

@@ -2,13 +2,13 @@
 #include "ui/Menus.hpp"
 #include "locomotion/Body.hpp"
 
-class MenuCalibration : public Menus::Menu
+class MenuBootCalibration : public Menus::Menu
 {
 public:
-    constexpr static const char* TAG = "MenuCalibration";
+    constexpr static const char* TAG = "MenuBootCalibration";
 
-    MenuCalibration() = default;
-    virtual ~MenuCalibration() = default;
+    MenuBootCalibration() = default;
+    virtual ~MenuBootCalibration() = default;
 
     enum class Page: uint8_t
     {

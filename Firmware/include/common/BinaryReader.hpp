@@ -30,6 +30,23 @@ public:
         offset += length;
         return Error::None;
     }
+
+    Error readString(char* out, size_t maxLength)
+    {
+        uint16_t strLength;
+        if (read(strLength) != Error::None)
+        {
+            return Error::OutOfBounds;
+        }
+
+        if (strLength >= maxLength)
+        {
+            return Error::OutOfBounds;
+        }
+
+        return readBytes((uint8_t*) out, strLength);
+    }
+
 private:
     const uint8_t* buffer;
     size_t size;

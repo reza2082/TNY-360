@@ -30,10 +30,7 @@ private:
     esp_err_t ws_handler(httpd_req_t* req);
 
     uint16_t server_port;
-    int nb_connected_clients = 0;
     httpd_handle_t server_handle = nullptr;
 
-    void on_connected();
-    void on_disconnected();
     Error register_uri_handlers();
 };

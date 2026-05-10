@@ -40,10 +40,9 @@ namespace SysStats
                 float delta_idle0 = (float)(idle0_time - last_idle0_time);
                 float delta_idle1 = (float)(idle1_time - last_idle1_time);
 
-                // Usage = 100 * (1 - idle_time / total_time)
-                // Clamp to [0, 100] just in case of anomalies
-                current_usage.core0 = (1.0f - (delta_idle0 / delta_total)) * 100.0f;
-                current_usage.core1 = (1.0f - (delta_idle1 / delta_total)) * 100.0f;
+                // Usage = (1 - idle_time / total_time) (range between 0 and 1)
+                current_usage.core0 = 1.0f - (delta_idle0 / delta_total);
+                current_usage.core1 = 1.0f - (delta_idle1 / delta_total);
 
                 // Save for next calculation
                 last_total_runtime = total_runtime;

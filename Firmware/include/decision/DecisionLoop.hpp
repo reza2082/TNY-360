@@ -64,6 +64,8 @@ public:
      */
     Error setAutoLifeLevel(uint8_t level);
 
+    uint8_t getAutoLifeLevel() const { return auto_life_level; }
+
     const IPC::ControlIntent& getControlIntent() const { return intent; }
 
     const IPC::RobotState& getRobotState() const { return state; }
@@ -135,6 +137,7 @@ private:
     bool loop_running = false;
     IPC::ControlIntent intent;
     IPC::RobotState state;
+    uint8_t auto_life_level = AutoLifeLevel::Full; // Default to full auto life features enabled
 
     Vec3f askedBodyVel;
     Vec3f askedBodyRot;

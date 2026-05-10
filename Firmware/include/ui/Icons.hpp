@@ -47,6 +47,17 @@ namespace Icons
         0b01111110,
     };
 
+    constexpr uint8_t CalibrationMenu[8] = {
+        0b00011000,
+        0b00011000,
+        0b00000000,
+        0b11011011,
+        0b11011011,
+        0b00000000,
+        0b00011000,
+        0b00011000,
+    };
+
     constexpr uint8_t SystemMenu[8] = {
         0b00000110,
         0b11111001,
@@ -89,6 +100,17 @@ namespace Icons
         0b01111110,
         0b11100111,
         0b11000011,
+    };
+
+    constexpr uint8_t MotorMenu[8] = {
+        0b00111100,
+        0b01001110,
+        0b11001001,
+        0b11111001,
+        0b10011111,
+        0b10010011,
+        0b01110010,
+        0b00111100,
     };
 
     constexpr uint8_t SoundMenu[8] = {

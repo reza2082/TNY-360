@@ -45,6 +45,17 @@ Error DecisionLoop::stop()
     return Error::None;
 }
 
+Error DecisionLoop::setAutoLifeLevel(uint8_t level)
+{
+    if (level > AutoLifeLevel::Full)
+    {
+        return Error::InvalidParameters;
+    }
+    auto_life_level = level;
+    // TODO : Implement real auto life logic and all
+    return Error::None;
+}
+
 Error DecisionLoop::askBodyVelocity(float x_ms, float y_ms, float z_rads)
 {
     last_ask_timestamp_ms = esp_log_timestamp();
@@ -104,7 +115,7 @@ void DecisionLoop::decision_loop()
         // Get the robot state from the Reflex core
         if (!IPC::getState(&state))
         {
-            LOG_WARNING(TAG, "Failed to get robot state from Reflex core");
+            // LOG_WARNING(TAG, "Failed to get robot state from Reflex core");
         }
 
         // Update decision logic
@@ -121,6 +132,10 @@ void DecisionLoop::decision_loop()
         {
             final_intent.joint_overrides[i] = askedJointAngles[i];
         }
+        for (int i = 0; i < (int) Leg::Id::Count; i++)
+        {
+            final_intent.leg_overrides[i] = askedLegOverrides[i];
+        }
         // Then override with auto life features
         fillIntent(final_intent, state);
 
@@ -130,6 +145,7 @@ void DecisionLoop::decision_loop()
         {
             LOG_WARNING(TAG, "Failed to send intent to Reflex core");
         }
+        intent = final_intent; // store that for getters
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 

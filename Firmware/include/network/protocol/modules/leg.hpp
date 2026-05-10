@@ -1,6 +1,7 @@
 #pragma once
 #include "network/protocol/Protocol.hpp"
 #include "common/BinaryReader.hpp"
+#include "common/RPC.hpp"
 #include "locomotion/Leg.hpp"
 #include "Robot.hpp"
 #include <esp_system.h>
@@ -29,15 +30,22 @@ namespace Leg
             return;
         }
 
-        for (int i = 0; i < (int) ::Leg::JointId::Count; i++)
-        {
-            bool isEnabled = (enabledFlag & (1 << i)) != 0;
-            Joint& joint = Robot::GetInstance().getBody().getLeg((::Leg::Id)legId).getJoint((::Leg::JointId)i);
-            if (isEnabled) joint.enable();
-            else joint.disable();
-        }
-
-        ctx.respond(ResponseStatus::Ok);
+        RPC::ExecuteThreadSafe<Error>([enabledFlag, legId](){
+            Error err;
+            for (int i = 0; i < (int) ::Leg::JointId::Count; i++)
+            {
+                bool isEnabled = (enabledFlag & (1 << i)) != 0;
+                Joint& joint = Robot::GetInstance().getBody().getLeg((::Leg::Id)legId).getJoint((::Leg::JointId)i);
+                if (isEnabled) err = joint.enable();
+                else err = joint.disable();
+                if (err != Error::None) return err;
+            }
+            return Error::None;
+        }, [ctx](Error err){
+            if (err != Error::None)
+                ctx.respond(ResponseStatus::InvalidParameters);
+            else ctx.respond(ResponseStatus::Ok);
+        });
     }
 
     static void GetEnabled(const RequestContext& ctx, const uint8_t* payload)
@@ -51,17 +59,20 @@ namespace Leg
             return;
         }
 
-        uint8_t enabledFlag = 0;
-        for (int i = 0; i < (int) ::Leg::JointId::Count; i++)
-        {
-            Joint& joint = Robot::GetInstance().getBody().getLeg((::Leg::Id)legId).getJoint((::Leg::JointId)i);
-            if (joint.isEnabled())
+        RPC::ExecuteThreadSafe<uint8_t>([legId]() {
+            uint8_t enabledFlag = 0;
+            for (int i = 0; i < (int) ::Leg::JointId::Count; i++)
             {
-                enabledFlag |= (1 << i);
+                Joint& joint = Robot::GetInstance().getBody().getLeg((::Leg::Id)legId).getJoint((::Leg::JointId)i);
+                if (joint.isEnabled())
+                {
+                    enabledFlag |= (1 << i);
+                }
             }
-        }
-
-        ctx.respond(ResponseStatus::Ok, &enabledFlag, sizeof(enabledFlag));
+            return enabledFlag;
+        }, [ctx](uint8_t enabledFlag){
+            ctx.respond(ResponseStatus::Ok, (uint8_t*) &enabledFlag, sizeof(enabledFlag));
+        });
     }
 
     static void SetPosition(const RequestContext& ctx, const uint8_t* payload)

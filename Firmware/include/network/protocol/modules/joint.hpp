@@ -130,13 +130,6 @@ namespace Joint
             return;
         }
 
-        ::Joint* joint = ::Joint::GetJoint((::Joint::Id) jointId);
-        if (joint == nullptr)
-        {
-            ctx.respond(ResponseStatus::InvalidParameters);
-            return;
-        }
-
         float feedbackAngle = Robot::GetInstance().getDecisionLoop().getRobotState().joints[(int) jointId].feedback_angle_rad;
         ctx.respond(ResponseStatus::Ok, (uint8_t*) &feedbackAngle, sizeof(feedbackAngle));
     }

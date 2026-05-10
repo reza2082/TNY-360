@@ -1,5 +1,6 @@
 #include "locomotion/MotorController.hpp"
 #include "common/Log.hpp"
+#include "Robot.hpp"
 #include <cstdio>
 
 constexpr const char* TAG = "MotorController";
@@ -106,6 +107,14 @@ Error MotorController::startCalibration()
     }
 
     if (BaseType_t err = xTaskCreate([](void* param) {
+            // Stop the control loop and take over for the calibration
+            LOG_DEBUG(TAG, "Disabling control loop");
+            if (Error err = Robot::GetInstance().getControlLoop().stop(); err != Error::None)
+            {
+                LOG_ERROR(TAG, "Failed to stop control loop for motor calibration. Error [%s]", ErrorToString(err));
+                return;
+            }
+
             MotorController* controller = static_cast<MotorController*>(param);
             controller->calibration_state = CalibrationState::CALIBRATING;
             Error err = controller->run_calibration_sequence();
@@ -124,6 +133,15 @@ Error MotorController::startCalibration()
             {
                 LOG_ERROR(TAG, "Failed to disable motor after calibration. Error [%s]", ErrorToString(err));
             }
+
+            // Restart the control loop (back to normal operation)
+            LOG_DEBUG(TAG, "Restarting control loop");
+            if (Error err = Robot::GetInstance().getControlLoop().start(); err != Error::None)
+            {
+                LOG_ERROR(TAG, "Failed to start control loop after motor calibration. Error [%s]", ErrorToString(err));
+                return;
+            }
+
             // clean up task handle
             vTaskDelete(nullptr);
         }, "MotorCalib", 4096, this, tskIDLE_PRIORITY + 1, &calibration_task_handle); err != pdPASS)

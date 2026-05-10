@@ -46,6 +46,7 @@ Error WebSocket::init()
     config.max_uri_handlers = 8;
     config.ctrl_port = server_port + 1;
     config.max_open_sockets = 3;
+    // config.task_priority = tskIDLE_PRIORITY + 10;
     // config.lru_purge_enable = true;
 
     // start the server
@@ -85,42 +86,7 @@ Error WebSocket::register_uri_handlers()
     };
     httpd_register_uri_handler((httpd_handle_t) server_handle, &ws);
 
-    esp_event_handler_register(ESP_HTTP_SERVER_EVENT, HTTP_SERVER_EVENT_ON_CONNECTED,
-        [](void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data){
-            Robot::GetInstance().getNetworkManager().getWebSocket().on_connected();
-        }, nullptr
-    );
-    esp_event_handler_register(ESP_HTTP_SERVER_EVENT, HTTP_SERVER_EVENT_DISCONNECTED,
-        [](void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data){
-            Robot::GetInstance().getNetworkManager().getWebSocket().on_disconnected();
-        }, nullptr
-    );
-
     return Error::None;
-}
-
-void WebSocket::on_connected()
-{
-    nb_connected_clients++;
-    if (nb_connected_clients == 1) {
-        // First client connected, disable low power mode
-        LOG_DEBUG(TAG, "Client connected, disabling Wi-Fi low power mode.");
-        esp_wifi_set_ps(WIFI_PS_NONE);
-    }
-}
-
-void WebSocket::on_disconnected()
-{
-    nb_connected_clients--;
-    if (nb_connected_clients < 0) {
-        nb_connected_clients = 0; // Ensure the count doesn't go negative
-    }
-
-    if (nb_connected_clients == 0) {
-        // No client connected, activate low power mode
-        LOG_DEBUG(TAG, "No clients connected, switching Wi-Fi to low power mode.");
-        esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
-    }
 }
 
 void WebSocket::sendResponse(void* context, const Protocol::MessageHeader& header, const uint8_t* payload)

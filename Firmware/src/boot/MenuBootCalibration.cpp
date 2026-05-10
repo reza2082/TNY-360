@@ -1,4 +1,4 @@
-#include "boot/MenuCalibration.hpp"
+#include "boot/MenuBootCalibration.hpp"
 #include "ui/Icons.hpp"
 #include "ui/Draw.hpp"
 #include "common/config.hpp"
@@ -7,7 +7,7 @@
 #include "drivers/MotorDriver.hpp"
 #include "Robot.hpp"
 
-bool MenuCalibration::onBack()
+bool MenuBootCalibration::onBack()
 {
     if (page == Page::Intro)
     {
@@ -27,7 +27,7 @@ bool MenuCalibration::onBack()
     return true;
 }
 
-bool MenuCalibration::onSelect()
+bool MenuBootCalibration::onSelect()
 {
     if (page == Page::Intro)
     {
@@ -39,28 +39,28 @@ bool MenuCalibration::onSelect()
     return true;
 }
 
-bool MenuCalibration::onNext()
+bool MenuBootCalibration::onNext()
 {
     return false;
 }
 
-bool MenuCalibration::onPrev()
+bool MenuBootCalibration::onPrev()
 {
     return false;
 }
 
 
-void MenuCalibration::onShow()
+void MenuBootCalibration::onShow()
 {
     triggerRender();
     Robot::GetInstance().getBody().init();
 }
 
-void MenuCalibration::onHide()
+void MenuBootCalibration::onHide()
 { 
 }
 
-void MenuCalibration::onRender()
+void MenuBootCalibration::onRender()
 {
     switch (page)
     {
@@ -108,7 +108,7 @@ void MenuCalibration::onRender()
     }
 }
 
-void MenuCalibration::onUpdate()
+void MenuBootCalibration::onUpdate()
 {
     switch (page)
     {

@@ -28,6 +28,7 @@ void ErrorHandle(ErrorStruct::ErrorStruct err);
 
 struct PerfMonitor
 {
+    uint32_t iterations = 0;
     int64_t start_time = 0;
     int64_t total_time = 0;
 
@@ -39,14 +40,16 @@ struct PerfMonitor
     inline void stop()
     {
         total_time += (esp_timer_get_time() - start_time);
+        iterations++;
     }
 
     inline void reset()
     {
         total_time = 0;
+        iterations = 0;
     }
     
-    inline float get_avg_ms(int iterations)
+    inline float get_avg_ms()
     {
         return (float)total_time / (iterations * 1000.0f);
     }
