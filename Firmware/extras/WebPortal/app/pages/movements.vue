@@ -56,7 +56,7 @@
             <div class="flex flex-col space-y-2 p-2">
                 <p class="text-xl">Translation speed</p>
                 <div class="flex space-x-4">
-                    <USlider v-model="translation_speed" :min="0.0" :max="1" :step="0.01" class="w-lg" />
+                    <USlider v-model="translation_speed" :min="0.0" :max="0.8" :step="0.05" class="w-lg" />
                     <code class="w-12 bg-slate-200 dark:bg-slate-900 text-center px-2 py-0.5 rounded-md font-light">{{ translation_speed }}</code>
                     <p>m/s</p>
                 </div>
@@ -64,7 +64,7 @@
             <div class="flex flex-col space-y-2 p-2">
                 <p class="text-xl">Rotation speed</p>
                 <div class="flex space-x-4">
-                    <USlider v-model="rotation_speed" :min="0.0" :max="180" :step="1" class="w-lg" />
+                    <USlider v-model="rotation_speed" :min="0" :max="90" :step="5" class="w-lg" />
                     <code class="w-12 bg-slate-200 dark:bg-slate-900 text-center px-2 py-0.5 rounded-md font-light">{{ rotation_speed }}</code>
                     <p>deg/s</p>
                 </div>
@@ -78,27 +78,32 @@
 </template>
 
 <script lang="ts" setup>
+import { DEG2RAD } from 'three/src/math/MathUtils';
 
-const remote = useRemote();
+
+const tny = useTNY360();
+
+const DEFAULT_HEIGHT = 13; // cm
 
 // body control
 const body = reactive({
-    pos_x: 2,
+    pos_x: 0,
     pos_y: 0,
-    pos_z: 12,
+    pos_z: DEFAULT_HEIGHT,
     rot_x: 0,
     rot_y: 0,
     rot_z: 0,
 });
 
 watch(body, () => {
-    remote.setBodyPosture(
-        body.rot_x,
-        body.rot_y,
-        body.rot_z,
-        body.pos_x,
-        body.pos_y,
-        body.pos_z
+    tny.value?.body.setPosture(
+        body.pos_x / 100, // cm to m
+        body.pos_y / 100, // cm to m
+        body.pos_z / 100, // cm to m
+        body.rot_x * DEG2RAD, // degrees to radians
+        body.rot_y * DEG2RAD, // degrees to radians
+        body.rot_z * DEG2RAD, // degrees to radians
+        true
     );
 }, { deep: true });
 
@@ -112,19 +117,10 @@ const keys = {
     pz: false,
     mz: false,
 };
-const translation_speed = ref(0.40);
-const rotation_speed = ref(80);
+const translation_speed = ref(0.10); // m/s
+const rotation_speed = ref(45); // deg/s
 
 onMounted(() => {
-    remote.setBodyPosture(
-        body.rot_x,
-        body.rot_y,
-        body.rot_z,
-        body.pos_x,
-        body.pos_y,
-        body.pos_z
-    ); // send at the start the initial posture
-
     window.addEventListener('keydown', (event) => {
         switch (event.code) {
             case 'KeyW':
@@ -172,7 +168,16 @@ onMounted(() => {
         }
         updateMovement();
     });
+
+    gamepadList.value = [];
+    for (const gpd of navigator.getGamepads()) {
+        if (gpd !== null) gamepadList.value.push(gpd);
+    }
 });
+
+onUnmounted(() => {
+    shouldPoll = false;
+})
 
 const movement = reactive({
     x: 0,
@@ -180,11 +185,11 @@ const movement = reactive({
     z: 0,
 });
 
-function updateMovement() {
+async function updateMovement() {
     movement.x = (keys.px ? translation_speed.value : 0) - (keys.mx ? translation_speed.value : 0);
     movement.y = (keys.py ? translation_speed.value : 0) - (keys.my ? translation_speed.value : 0);
     movement.z = (keys.pz ? rotation_speed.value : 0) - (keys.mz ? rotation_speed.value : 0);
-    remote.setMovementVelocity(movement.x, movement.y, movement.z);
+    await tny.value?.body.setVelocity(movement.x, movement.y, movement.z * DEG2RAD, true); // deg/s to rad/s
 }
 
 const gamepadList = ref<Gamepad[]>([]);
@@ -198,9 +203,11 @@ const gamepadItems = computed<any[]>(() => {
 });
 
 window.addEventListener('gamepadconnected', (event) => {
+    console.debug('gamepag connected');
     gamepadList.value.push(event.gamepad);
 });
 window.addEventListener('gamepaddisconnected', (event) => {
+    console.debug('gamepad disconnected');
     gamepadList.value = gamepadList.value.filter(gp => gp.index !== event.gamepad.index);
 });
 
@@ -216,54 +223,60 @@ watch(selectedGamepad, (newGamepad: any) => {
     }
 });
 
-let intervalId: number | null = null;
-function stopGamepadPolling() {
-    if (intervalId !== null) {
-        clearInterval(intervalId);
-        intervalId = null;
+let shouldPoll = true;
+async function pollGamepad(gamepad: Gamepad) {
+    const gp = navigator.getGamepads()[gamepad.index];
+    if (gp) {
+        const leftStickX = gp.axes[0] || 0;
+        const leftStickY = gp.axes[1] || 0;
+        const rightStickX = gp.axes[2] || 0;
+        const deadzone = 0.1;
+
+        const x = Math.abs(leftStickX) > deadzone ? leftStickX : 0;
+        const y = Math.abs(leftStickY) > deadzone ? leftStickY : 0;
+        const z = Math.abs(rightStickX) > deadzone ? rightStickX : 0;
+
+        movement.x = -y * translation_speed.value;
+        movement.y = -x * translation_speed.value;
+        movement.z = -z * rotation_speed.value;
+
+        try { await tny.value?.body.setVelocity(movement.x, movement.y, movement.z * DEG2RAD, true); }
+        catch (err) {}
+
+        const dpadUp = gp.buttons[12]?.pressed;
+        const dpadDown = gp.buttons[13]?.pressed;
+        const dpadLeft = gp.buttons[14]?.pressed;
+        const dpadRight = gp.buttons[15]?.pressed;
+
+        const bodyAngle = 5; // degrees
+        const bodyAngleY = ((dpadUp ? 1 : 0) + (dpadDown ? -1 : 0)) * bodyAngle;
+        const bodyAngleX = ((dpadLeft ? -1 : 0) + (dpadRight ? 1 : 0)) * bodyAngle;
+        try {
+            await tny.value?.body.setPosture(
+                body.pos_x / 100,
+                body.pos_y / 100,
+                body.pos_z / 100,
+                bodyAngleX * DEG2RAD,
+                bodyAngleY * DEG2RAD,
+                0,
+            );
+        } catch (err) {}
+
+        console.group(`Movement infos`);
+        console.log(`movement: x=${movement.x.toFixed(2)} m/s, y=${movement.y.toFixed(2)} m/s, z=${movement.z.toFixed(2)} deg/s`)
+        console.log(`posture: rot_x=${bodyAngleX} deg, rot_y=${bodyAngleY} deg`);
+        console.groupEnd();
     }
+
+    if (shouldPoll) setTimeout(() => pollGamepad(gamepad), 100);
+}
+
+function stopGamepadPolling() {
+    shouldPoll = false;
 }
 function startGamepadPolling(gamepad: Gamepad) {
-    intervalId = setInterval(() => {
-        const gp = navigator.getGamepads()[gamepad.index];
-        if (gp) {
-            const leftStickX = gp.axes[0] || 0;
-            const leftStickY = gp.axes[1] || 0;
-            const rightStickX = gp.axes[2] || 0;
-            const deadzone = 0.1;
-
-            const x = Math.abs(leftStickX) > deadzone ? leftStickX : 0;
-            const y = Math.abs(leftStickY) > deadzone ? leftStickY : 0;
-            const z = Math.abs(rightStickX) > deadzone ? rightStickX : 0;
-
-            movement.x = -y * translation_speed.value;
-            movement.y = -x * translation_speed.value;
-            movement.z = -z * rotation_speed.value;
-
-            remote.setMovementVelocity(movement.x, movement.y, movement.z);
-            console.log(`Gamepad movement: x=${movement.x.toFixed(2)} m/s, y=${movement.y.toFixed(2)} m/s, z=${movement.z.toFixed(2)} deg/s`);
-
-            setTimeout(() => {
-                const dpadUp = gp.buttons[12]?.pressed;
-                const dpadDown = gp.buttons[13]?.pressed;
-                const dpadLeft = gp.buttons[14]?.pressed;
-                const dpadRight = gp.buttons[15]?.pressed;
-
-                const bodyAngle = 15; // degrees
-                const bodyAngleY = ((dpadUp ? 1 : 0) + (dpadDown ? -1 : 0)) * bodyAngle;
-                const bodyAngleX = ((dpadLeft ? -1 : 0) + (dpadRight ? 1 : 0)) * bodyAngle;
-                remote.setBodyPosture(
-                    bodyAngleX,
-                    bodyAngleY,
-                    0,
-                    body.pos_x,
-                    body.pos_y,
-                    body.pos_z
-                );
-                console.log(`Gamepad body posture: rot_x=${bodyAngleX} deg, rot_y=${bodyAngleY} deg`);
-            }, 50);
-        }
-    }, 100); // Polling period in ms
+    shouldPoll = true;
+    pollGamepad(gamepad);
 }
 
 </script>

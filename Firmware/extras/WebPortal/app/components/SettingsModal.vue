@@ -16,7 +16,7 @@
 </template>
 
 <script lang="ts" setup>
-const remote = useRemote();
+const tny = useTNY360();
 
 const ssid = ref('');
 const password = ref('');
@@ -25,9 +25,9 @@ const wifiConnectBtnLoading = ref(false);
 async function onConnect() {
     wifiConnectBtnLoading.value = true;
     try {
-        await remote.connectToAP(ssid.value, password.value);
+        await tny.value?.wifi.connectToAP(ssid.value, password.value);
     } catch (err) {
-
+        console.error('Failed to connect to Wi-Fi:', err);
     }
     wifiConnectBtnLoading.value = false;
 }

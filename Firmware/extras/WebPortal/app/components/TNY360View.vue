@@ -20,8 +20,11 @@ import { useLoop, useTres, useLoader, extend } from '@tresjs/core';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as THREE from 'three';
+import { RAD2DEG } from 'three/src/math/MathUtils';
 
-const remote = useRemote();
+const toast = useToast();
+
+const tny = useTNY360();
 const { camera, renderer } = useTres();
 const { onBeforeRender } = useLoop();
 
@@ -69,17 +72,26 @@ function registerBone(bone: THREE.Bone) {
     }
 }
 
-const { state: model, isLoading, error } = useLoader(
-  GLTFLoader,
-  '/TNY-360.glb',
-);
-watchEffect(error => {
-  if (error) {
-    console.error('Error loading model:', error);
-  }
+const modelLoadingToast = toast.add({
+    title: 'Loading 3D Model',
+    description: 'Loading the TNY-360 model, please wait...',
+    duration: 0, // Make it persistent until manually dismissed
 });
+const { state: model, isLoading, error } = useLoader(GLTFLoader, '/TNY-360.glb');
+// watchEffect(() => {
+//     if (error.value) {
+//         toast.add({
+//             title: 'Error Loading Model',
+//             description: 'There was an error loading the 3D model.',
+//             duration: 5000,
+//         });
+//         console.error('Error loading model:', error.value);
+//     } else if (!isLoading.value && model.value) {
+//         
+//     }
+// });
 watchEffect(() => {
-  if (!isLoading.value) {
+  if (!isLoading.value && model.value) {
     model.value.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
@@ -90,41 +102,66 @@ watchEffect(() => {
             const bone = child as THREE.Bone;
             registerBone(bone);
         }
-    } );
+    });
+    setTimeout(() => {
+        toast.update(modelLoadingToast.id, {
+            title: 'Model Loaded',
+            description: 'The TNY-360 model has been loaded.',
+            color: 'success',
+            duration: 2000,
+        });
+    }, 10);
+  }
+
+  if (error.value) {
+    setTimeout(() => {
+        toast.update(modelLoadingToast.id, {
+            title: 'Error Loading Model',
+            description: 'There was an error loading the 3D model.',
+            color: 'error',
+            duration: 4000,
+        });
+    }, 10);
+    console.error('Error loading model:', error.value);
   }
 });
 
-const jointIndices = [7, 5, 6, 4, 2, 3, 10, 8, 9, 13, 11, 12];
 const jointAngles = ref<number[]>(Array(12).fill(0));
 const bodyOrientation = ref<THREE.Quaternion>(new THREE.Quaternion());
-let pollingInterval: number | null = null;
-onMounted(() => {
-    pollingInterval = setInterval(async () => {
-        for (let i = 0; i < jointAngles.value.length; i++) {
-            try {
-                jointAngles.value[i] = await remote.getJointFeedbackAngle(jointIndices[i] ?? 0);
-            } catch (err) {}
-        }
+let shouldFetch = false;
 
+async function fetchAngleContinuous() {
+    for (let i = 0; i < jointAngles.value.length; i++) {
         try {
-            const orientation = await remote.getBodyOrientation();
-            if (model.value) {
-                const quat = new THREE.Quaternion(
-                    orientation.x,
-                    orientation.y,
-                    orientation.z,
-                    orientation.w
-                ).normalize();
-                bodyOrientation.value = quat;
-            }
-        } catch (err) {}
-    }, 500);
+            jointAngles.value[i] = (await tny.value?.joint.getFeedbackAngle(i) ?? 0) * RAD2DEG;
+        } catch (err) { console.warn(`Could not get joint id=${i} feedback angle`, err); }
+    }
+
+    try {
+        const orientation = await tny.value?.imu.getOrientation() ?? { x: 0, y: 0, z: 0, w: 1 };
+        if (model.value) {
+            const quat = new THREE.Quaternion(
+                orientation.x,
+                orientation.y,
+                orientation.z,
+                orientation.w
+            ).normalize();
+            bodyOrientation.value = quat;
+        }
+    } catch (err) { console.warn('Could not get imu orientation', err); }
+
+    if (shouldFetch) setTimeout(fetchAngleContinuous, 100);
+} 
+
+onMounted(() => {
+    setTimeout(() => {
+        shouldFetch = true;
+        fetchAngleContinuous();
+    }, 10);
 });
 
 onUnmounted(() => {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-    }
+    shouldFetch = false;
 });
 
 function DEG_TO_RAD(deg: number): number {

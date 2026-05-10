@@ -18,33 +18,33 @@ const joints = [
     {
         name: 'Front Left Leg',
         joints: [
-            { index: 1, name: 'Hip Roll', range: [-45, 45] },
-            { index: 2, name: 'Hip Pitch', range: [-135, 45] },
-            { index: 3, name: 'Knee Pitch', range: [0, 135] },
-        ]
-    },
-    {
-        name: 'Front Right Leg',
-        joints: [
-            { index: 4, name: 'Hip Roll', range: [-45, 45] },
-            { index: 5, name: 'Hip Pitch', range: [-135, 45] },
-            { index: 6, name: 'Knee Pitch', range: [0, 135] },
+            { index: 0, name: 'Hip Roll', range: [-45, 45] },
+            { index: 1, name: 'Hip Pitch', range: [-135, 45] },
+            { index: 2, name: 'Knee Pitch', range: [0, 135] },
         ]
     },
     {
         name: 'Back Left Leg',
         joints: [
-            { index: 7, name: 'Hip Roll', range: [-45, 45] },
-            { index: 8, name: 'Hip Pitch', range: [-135, 45] },
-            { index: 9, name: 'Knee Pitch', range: [0, 135] },
+            { index: 3, name: 'Hip Roll', range: [-45, 45] },
+            { index: 4, name: 'Hip Pitch', range: [-135, 45] },
+            { index: 5, name: 'Knee Pitch', range: [0, 135] },
         ]
     },
     {
         name: 'Back Right Leg',
         joints: [
-            { index: 10, name: 'Hip Roll', range: [-45, 45] },
-            { index: 11, name: 'Hip Pitch', range: [-135, 45] },
-            { index: 12, name: 'Knee Pitch', range: [0, 135] },
+            { index: 6, name: 'Hip Roll', range: [-45, 45] },
+            { index: 7, name: 'Hip Pitch', range: [-135, 45] },
+            { index: 8, name: 'Knee Pitch', range: [0, 135] },
+        ]
+    },
+    {
+        name: 'Front Right Leg',
+        joints: [
+            { index: 9, name: 'Hip Roll', range: [-45, 45] },
+            { index: 10, name: 'Hip Pitch', range: [-135, 45] },
+            { index: 11, name: 'Knee Pitch', range: [0, 135] },
         ]
     },
 ];

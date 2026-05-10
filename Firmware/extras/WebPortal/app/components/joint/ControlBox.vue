@@ -31,7 +31,7 @@
             </div>
         </div>
         <div class="flex flex-col space-y-3">
-            <div class="flex space-x-8 justify-between items-center">
+            <!-- <div class="flex space-x-8 justify-between items-center">
                 <p> Calibration </p>
                 <UButton variant="soft" disabled :color="getCalibColor(calibrationState)" :label="calibrationState"/>
             </div>
@@ -39,14 +39,16 @@
                 <UButton variant="soft" label="Calibrate" icon="i-lucide-ruler" @click="onCalibrateClicked" />
                 <UButton v-if="calibrationState === 'CALIBRATED'" variant="soft" color="error" :loading="deleteCalibBtnLoading"
                     label="Delete Calibration" icon="i-lucide-trash" trailing @click="onDeleteCalibrationClicked" />
-            </div>
+            </div> -->
         </div>
     </div>
-    <JointCalibrationModal :index="index" :name="name" v-model:open="calibrationModalOpen" />
+    <!-- <JointCalibrationModal :index="index" :name="name" v-model:open="calibrationModalOpen" /> -->
 </template>
 
 <script lang="ts" setup>
-const remote = useRemote();
+import { RAD2DEG } from 'three/src/math/MathUtils';
+
+const tny = useTNY360();
 
 const props = defineProps<{
     index: number;
@@ -60,7 +62,7 @@ function toggleEnabled() {
     sendEnabled(props.index, enabled.value);
 }
 async function sendEnabled(jointIndex: number, enabled: boolean) {
-    await remote.setJointState(jointIndex, enabled);
+    await tny.value?.joint.setEnabled(jointIndex, enabled, true);
 }
 
 const targetAngle = ref(Math.round(((props.range[0]||0) + (props.range[1]||0)) / 2));
@@ -74,65 +76,61 @@ watch(targetAngle, (newAngle) => {
         clearTimeout(onTargetAngleChangedTimeout.value);
     }
     onTargetAngleChangedTimeout.value = setTimeout(async () => {
-        await remote.setJointTarget(props.index, newAngle);
+        await tny.value?.joint.setAngle(props.index, newAngle * Math.PI / 180, true);
     }, 100);
 });
 
-const calibrationState = ref<CalibrationState>('UNCALIBRATED');
-function getCalibColor(state: CalibrationState) {
-    return ({
-        UNCALIBRATED: 'error',
-        CALIBRATING: 'warning',
-        CALIBRATED: 'success',
-    }[state]) as 'error'|'warning'|'success';
-}
+// const calibrationState = ref<CalibrationState>('UNCALIBRATED');
+// function getCalibColor(state: CalibrationState) {
+//     return ({
+//         UNCALIBRATED: 'error',
+//         CALIBRATING: 'warning',
+//         CALIBRATED: 'success',
+//     }[state]) as 'error'|'warning'|'success';
+// }
 
-const calibrationModalOpen = ref(false);
-function onCalibrateClicked() {
-    calibrationModalOpen.value = true;
-}
+// const calibrationModalOpen = ref(false);
+// function onCalibrateClicked() {
+//     calibrationModalOpen.value = true;
+// }
 
-const deleteCalibBtnLoading = ref(false);
-async function onDeleteCalibrationClicked() {
-    deleteCalibBtnLoading.value = true;
+// const deleteCalibBtnLoading = ref(false);
+// async function onDeleteCalibrationClicked() {
+//     deleteCalibBtnLoading.value = true;
+//     try {
+//         await remote.deleteJointCalibration(props.index);
+//     } catch (err) {
+//         console.error("Error deleting calibration data :", err);
+//     }
+//     deleteCalibBtnLoading.value = false;
+//     calibrationState.value = await remote.getJointCalibrationState(props.index);
+// }
+
+// watch(calibrationModalOpen, async (newVal) => {
+//     calibrationState.value = await remote.getJointCalibrationState(props.index);
+//     enabled.value = await remote.getJointState(props.index);
+// });
+
+let shouldFetchInfos = false;
+async function fetchInfosContinuous() {
     try {
-        await remote.deleteJointCalibration(props.index);
-    } catch (err) {
-        console.error("Error deleting calibration data :", err);
-    }
-    deleteCalibBtnLoading.value = false;
-    calibrationState.value = await remote.getJointCalibrationState(props.index);
+        enabled.value = await tny.value?.joint.getEnabled(props.index) || false;
+        // calibrationState.value = await tny.value?.joint.getCalibrationState(props.index) || 'UNCALIBRATED';
+        modelAngle.value = Math.round((await tny.value?.joint.getModelAngle(props.index) ?? 0) * RAD2DEG);
+        feedbackAngle.value = Math.round((await tny.value?.joint.getFeedbackAngle(props.index) ?? 0) * RAD2DEG);
+        predictedAngle.value = Math.round((await tny.value?.joint.getEstimatedAngle(props.index) ?? 0) * RAD2DEG);
+    } catch (err) { console.warn('Failed to get joint infos', err); }
+
+    if (shouldFetchInfos) setTimeout(fetchInfosContinuous, 1000);
 }
 
-watch(calibrationModalOpen, async (newVal) => {
-    calibrationState.value = await remote.getJointCalibrationState(props.index);
-    enabled.value = await remote.getJointState(props.index);
-});
-
-
-let pollingInterval: number | null = null;
 onMounted(async () => {
-    enabled.value = await remote.getJointState(props.index);
-    calibrationState.value = await remote.getJointCalibrationState(props.index);
-
-    let counter = 0;
-    pollingInterval = setInterval(async () => {
-        modelAngle.value = Math.round(await remote.getJointModelAngle(props.index));
-        feedbackAngle.value = Math.round(await remote.getJointFeedbackAngle(props.index));
-        predictedAngle.value = Math.round(await remote.getJointPredictedAngle(props.index));
-        if (counter++ === 5) // every 1s just to be sure it's up to date
-        {
-            enabled.value = await remote.getJointState(props.index);
-            calibrationState.value = await remote.getJointCalibrationState(props.index);
-            counter = 0;
-        }
-    }, 500);
+    shouldFetchInfos = true;
+    fetchInfosContinuous();
 });
 
 onUnmounted(() => {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-    }
+    shouldFetchInfos = false;
 })
 </script>
 
