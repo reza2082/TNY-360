@@ -43,6 +43,17 @@ namespace MotorDriver
             }
         }
 
+        // Reset PCA9685 to ensure it's in a known state
+        {
+            esp_err_t err = pca9685_reset(pca_handle);
+            if (err != ESP_OK)
+            {
+                LOG_ERROR(TAG, "Failed to reset PCA9685");
+                ErrorHandle(ErrorStruct::DriverInitFailed);
+                return Error::HardwareFailure;
+            }
+        }
+
         // Configure PCA9685
         {
             pca9685_config_t pca_config = {

@@ -48,6 +48,6 @@ direct_dependencies:
 - bblanchon/arduinojson
 - espressif/esp32-camera
 - joltwallet/littlefs
-manifest_hash: d7cd7f76f32e41b0e9448128285dd430c1687c8ab156d1054d605561b1b6025c
+manifest_hash: d434131a1d6ad820a2ab8830cb9d01cb12f5981f2bb51d525a705ba523921700
 target: esp32s3
 version: 2.0.0

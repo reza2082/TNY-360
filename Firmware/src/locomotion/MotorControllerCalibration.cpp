@@ -1,5 +1,6 @@
 #include "locomotion/MotorController.hpp"
 #include "common/Log.hpp"
+#include "locomotion/Joint.hpp"
 #include "locomotion/calibration/get_feedback_noise.hpp"
 #include "locomotion/calibration/check_feedback_inversion.hpp"
 #include "locomotion/calibration/get_feedback_latency.hpp"
@@ -20,17 +21,18 @@ Error MotorController::run_calibration_sequence()
     BoundDescription min_bound;
     BoundDescription max_bound;
 
-    LOG_SCOPE(TAG, "Starting Motor Calibration");
+    LOG_SCOPE(TAG, "Starting Motor Calibration [motor_channel=%d, analog_channel=%d]", motor_channel, analog_channel);
     this->calibration_progress = 0.0f;
 
     // Disable all motors
     LOG_DEBUG(TAG, "Disabling all motors");
     {
-        for (MotorDriver::Channel i = 0; i < MotorDriver::CHANNEL_COUNT; i++)
+        for (int i = 0; i < (int) Joint::Id::Count; i++)
         {
-            RETURN_ERROR(MotorDriver::SetPWM(i, 0));
+            Joint* joint = Joint::GetJoint((Joint::Id)i);
+            if (joint) joint->disable();
         }
-        RETURN_ERROR(MotorDriver::SendData());
+        RETURN_ERROR(MotorDriver::DisableAllMotors());
         vTaskDelay(pdMS_TO_TICKS(500));
     }
     this->calibration_progress = 0.1f;
@@ -38,7 +40,7 @@ Error MotorController::run_calibration_sequence()
     // Move motor to center
     LOG_DEBUG(TAG, "Moving to center");
     {
-        RETURN_ERROR(MotorDriver::SetPWM(motor_channel, pwm_center))
+        RETURN_ERROR(MotorDriver::SetPWM(motor_channel, pwm_center));
         RETURN_ERROR(MotorDriver::SendData());
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -94,7 +96,7 @@ Error MotorController::run_calibration_sequence()
     // Test deadband size
     LOG_DEBUG(TAG, "Testing deadband size");
     {
-        if  (noise_v > 0.025f) // If noise > 25mV, hardcode deadband because we won't be able to detect it properly
+        if  (noise_v > 0.015f) // If noise > 15mV, hardcode deadband because we won't be able to detect it properly
         {
             LOG_WARNING(TAG, "Feedback noise is quite high (%.3f V). Hardcoding deadband size", noise_v);
             deadband_size = MotorDriver::MS_TO_PWM(0.01); // around 1 degree, which is a common value for servomotors.
@@ -123,17 +125,13 @@ Error MotorController::run_calibration_sequence()
         params.pwm_max = MotorDriver::MS_TO_PWM(2.8);
         params.pwm_min = MotorDriver::MS_TO_PWM(0.2);
         params.pwm_safe = MotorDriver::MS_TO_PWM(0.3);
-        params.pwm_faststep = deadband_size;
-        params.pwm_slowstep = deadband_size * 0.3f;
         params.direction = -1;
-        params.feedback_noise = noise_v;
-        params.feedback_latency_ms = feedback_latency_ms;
         if (Error err = get_physical_bound(params, motor_channel, analog_channel, min_bound); err != Error::None)
         {
             LOG_ERROR(TAG, "Minimum bound detection failed with error [%s]", ErrorToString(err));
             return Error::Unknown;
         }
-        LOG_DEBUG(TAG, "==> Minimum bound : %d PWM units (%.2f ms, %.2f deg) and %.2f V", min_bound.pwm_value, MotorDriver::PWM_TO_MS(min_bound.pwm_value), MotorDriver::PWM_TO_MS(min_bound.pwm_value) * 90.f, min_bound.feedback_value);
+        LOG_DEBUG(TAG, "==> Minimum bound : %d PWM and %.2f V", min_bound.pwm_value, min_bound.feedback_value);
     }
     this->calibration_progress = 0.7f;
 
@@ -145,24 +143,20 @@ Error MotorController::run_calibration_sequence()
         params.pwm_max = MotorDriver::MS_TO_PWM(2.8);
         params.pwm_min = MotorDriver::MS_TO_PWM(0.2);
         params.pwm_safe = MotorDriver::MS_TO_PWM(0.3);
-        params.pwm_faststep = deadband_size;
-        params.pwm_slowstep = deadband_size * 0.3f;
         params.direction = 1;
-        params.feedback_noise = noise_v;
-        params.feedback_latency_ms = feedback_latency_ms;
         if (Error err = get_physical_bound(params, motor_channel, analog_channel, max_bound); err != Error::None)
         {
             LOG_ERROR(TAG, "Maximum bound detection failed with error [%s]", ErrorToString(err));
             return Error::Unknown;
         }
-        LOG_DEBUG(TAG, "==> Maximum bound : %d PWM units (%.2f ms, %.2f deg) and %.2f V", max_bound.pwm_value, MotorDriver::PWM_TO_MS(max_bound.pwm_value), MotorDriver::PWM_TO_MS(max_bound.pwm_value) * 90.f, max_bound.feedback_value);
+        LOG_DEBUG(TAG, "==> Maximum bound : %d PWM and %.2f V", max_bound.pwm_value, max_bound.feedback_value);
     }
     this->calibration_progress = 0.8f;
 
     // Test max speed
     LOG_DEBUG(TAG, "Testing maximum speed");
     {
-
+        // TODO : Implement max speed estimation (by quickly moving between the two bounds and measuring the time)
     }
     this->calibration_progress = 0.9f;
 

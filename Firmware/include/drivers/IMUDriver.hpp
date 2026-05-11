@@ -5,7 +5,7 @@ namespace IMUDriver
 {
     constexpr const char* TAG = "IMUDriver";
 
-    typedef struct IMUData
+    struct IMUData
     {
         float accel_x_g;
         float accel_y_g;
@@ -13,7 +13,7 @@ namespace IMUDriver
         float gyro_x_ds;
         float gyro_y_ds;
         float gyro_z_ds;
-    } IMUData;
+    };
 
     /**
     * @brief Initializes the IMU driver.

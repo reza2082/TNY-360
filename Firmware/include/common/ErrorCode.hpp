@@ -28,6 +28,7 @@ namespace ErrorCode
     constexpr uint8_t ButtonsInitFailed = 0x16;         // 0b00010110
     constexpr uint8_t DecisionLoopInitFailed = 0x17;    // 0b00010111
     constexpr uint8_t ControlLoopInitFailed = 0x18;     // 0b00011000
+    constexpr uint8_t PowerInitFailed = 0x19;           // 0b00011001
 }
 
 namespace ErrorStruct
@@ -63,4 +64,5 @@ namespace ErrorStruct
     constexpr ErrorStruct ButtonsInitFailed =         {ErrorCode::ButtonsInitFailed,         "Failed to initialize Buttons module"};
     constexpr ErrorStruct DecisionLoopInitFailed =    {ErrorCode::DecisionLoopInitFailed,    "Failed to initialize Decision Loop"};
     constexpr ErrorStruct ControlLoopInitFailed =     {ErrorCode::ControlLoopInitFailed,     "Failed to initialize Control Loop"};
+    constexpr ErrorStruct PowerInitFailed =           {ErrorCode::PowerInitFailed,           "Failed to initialize Power Driver"};
 }

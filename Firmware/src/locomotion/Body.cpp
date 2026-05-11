@@ -1,6 +1,7 @@
 #include "locomotion/Body.hpp"
 #include "common/config.hpp"
 #include "common/Log.hpp"
+#include "drivers/PowerDriver.hpp"
 #include "common/RPC.hpp"
 #include "locomotion/IPC.hpp"
 
@@ -66,6 +67,12 @@ Error Body::init()
         return err;
     }
 
+    // Initialize the PowerDriver
+    if (Error err = PowerDriver::Init(); err != Error::None)
+    {
+        return err;
+    }
+
     // Initialize the IPC layer (for inter-core infos)
     if (Error err = IPC::Init(); err != Error::None)
     {
@@ -91,6 +98,12 @@ Error Body::deinit()
 
     // Deinitialize the IPC layer (for inter-core infos)
     if (Error err = IPC::Deinit(); err != Error::None)
+    {
+        return err;
+    }
+
+    // Deinitialize the PowerDriver
+    if (Error err = PowerDriver::Deinit(); err != Error::None)
     {
         return err;
     }
