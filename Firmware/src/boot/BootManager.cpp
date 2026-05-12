@@ -36,6 +36,7 @@ namespace BootManager
             return true; // don't boot as normal
         }
         
+        LOG_INFO(TAG, "No special boot needed. Starting normal boot");
         return false; // robot can proceed as normal
     }
 }

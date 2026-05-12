@@ -19,7 +19,7 @@ bool MenuUpdate::onSelect()
     if (updt.getStatus() == UpdateManager::Status::Done && updt.isUpdateAvailable())
     {
         // install update
-        updt.downloadAndApplyFirmwareUpdate();
+        updt.startUpdate();
         return true;
     }
 
@@ -40,7 +40,7 @@ bool MenuUpdate::onPrev()
 void MenuUpdate::onShow()
 {
     UpdateManager& updt = Robot::GetInstance().getNetworkManager().getUpdateManager();
-    updt.checkForUpdates();
+    updt.checkForUpdate();
 }
 
 void MenuUpdate::onHide()
@@ -59,7 +59,7 @@ void MenuUpdate::onRender()
             if (updt.isUpdateAvailable())
             {
                 const char* text = "New update!";
-                const char* text_ver = updt.getLatestVersion();
+                const char* text_ver = updt.getLatestVersion().c_str();
                 uint16_t text_width = Draw::GetTextWidth(text);
                 uint16_t ver_width = Draw::GetTextWidth(text_ver);
                 Draw::RectRounded(
@@ -85,7 +85,7 @@ void MenuUpdate::onRender()
             }
             break;
         }
-        case UpdateManager::Status::Fetching : {
+        case UpdateManager::Status::FetchingUpdate : {
             const char* text = "Fetching";
             uint16_t width = Draw::GetTextWidth(text);
             uint16_t height = 8;
@@ -123,6 +123,38 @@ void MenuUpdate::onRender()
             }
             {
                 const char* text = "Firmware";
+                uint16_t width = Draw::GetTextWidth(text);
+                Draw::Text(ScreenDriver::info.width / 2 - width / 2, HEADER_HEIGHT + 16, text);
+            }
+            Draw::RectRounded(8, HEADER_HEIGHT + 30, ScreenDriver::info.width - 16, 16, 4);
+            Draw::RectRounded(9, HEADER_HEIGHT + 31, ScreenDriver::info.width - 18, 14, 3, ScreenDriver::COLOR_BLACK);
+            Draw::RectRounded(9, HEADER_HEIGHT + 31, (ScreenDriver::info.width - 18) * updt.getProgress(), 14, 3);
+            break;
+        }
+        case UpdateManager::Status::DownloadingFilesystem : {
+            {
+                const char* text = "Downloading";
+                uint16_t width = Draw::GetTextWidth(text);
+                Draw::Text(ScreenDriver::info.width / 2 - width / 2, HEADER_HEIGHT + 4, text);
+            }
+            {
+                const char* text = "Filesystem";
+                uint16_t width = Draw::GetTextWidth(text);
+                Draw::Text(ScreenDriver::info.width / 2 - width / 2, HEADER_HEIGHT + 16, text);
+            }
+            Draw::RectRounded(8, HEADER_HEIGHT + 30, ScreenDriver::info.width - 16, 16, 4);
+            Draw::RectRounded(9, HEADER_HEIGHT + 31, ScreenDriver::info.width - 18, 14, 3, ScreenDriver::COLOR_BLACK);
+            Draw::RectRounded(9, HEADER_HEIGHT + 31, (ScreenDriver::info.width - 18) * updt.getProgress(), 14, 3);
+            break;
+        }
+        case UpdateManager::Status::UpdatingFilesystem : {
+            {
+                const char* text = "Updating";
+                uint16_t width = Draw::GetTextWidth(text);
+                Draw::Text(ScreenDriver::info.width / 2 - width / 2, HEADER_HEIGHT + 4, text);
+            }
+            {
+                const char* text = "Filesystem";
                 uint16_t width = Draw::GetTextWidth(text);
                 Draw::Text(ScreenDriver::info.width / 2 - width / 2, HEADER_HEIGHT + 16, text);
             }

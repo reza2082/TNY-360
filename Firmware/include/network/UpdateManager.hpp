@@ -1,6 +1,7 @@
 #pragma once
 #include "common/utils.hpp"
 #include "common/NVS.hpp"
+#include <string>
 
 class UpdateManager
 {
@@ -9,12 +10,13 @@ public:
 
     enum class Status: uint8_t {
         Done = 0,
-        Fetching,
+        FetchingUpdate,
         DownloadingFirmware,
         DownloadingFilesystem,
         UpdatingFirmware,
         UpdatingFilesystem,
         VerifyingFirmware,
+        VerifyingFilesystem,
         Rebooting,
         ErrorUnreachable,
         ErrorInvalidJson,
@@ -44,54 +46,72 @@ public:
     Error deinit();
 
     /**
-     * @brief Checks for firmware updates from the server.
-     * @return Error code indicating success or failure.
-     * @note This launches the check in an other task, check getStatus and getProgress for info.
+     * @brief Get the current update status
+     * @returns Current status of the update process (see Status enum)
      */
-    Error checkForUpdates();
-    
-    Error verifyFirmware();
+    Status getStatus();
 
     /**
-     * @brief Downloads and installs a new firmware (stored using previous checkForUpdate() call).
-     * @return Error code indicating success or failure.
-     * @note This launches the check in an other task, check getStatus and getProgress for info.
+     * @brief Get the current update progress
+     * @returns Progress as a float between 0.0 and 1.0
      */
-    Error downloadAndApplyFirmwareUpdate();
-    
+    float getProgress();
+
     /**
-     * @brief Downloads and installs a new filesystem (stored using previous checkForUpdate() call).
-     * @return Error code indicating success or failure.
-     * @note This launches the check in an other task, check getStatus and getProgress for info.
+     * @brief Get the latest available version string from the update server
+     * @returns Latest version string (e.g. "1.2.3") or empty string if not available
      */
-    Error downloadAndApplyFilesystemUpdate();
+    std::string getLatestVersion();
 
-    bool isUpdateAvailable() const { return updateAvailable; }
+    /**
+     * @brief Get if an update is currently available
+     * @returns True if an update is available, false otherwise
+     * @note Call checkForUpdate() and wait a bit to update this result
+     */
+    bool isUpdateAvailable();
 
-    const char* getLatestVersion() const { return latestVersion; }
+    /**
+     * @brief Get if an update is currently pending.
+     * @returns True if an update is pending, false otherwise
+     * @note If an update is pending, call continueUpdate() to continue the update process (e.g. after a reboot)
+     */
+    bool isUpdatePending();
 
-    Status getStatus() { return status; }
+    /**
+     * @brief Checks for available updates on the update server. 
+     * @returns Error code indicating success or failure of the update check process.
+     * @note Use isUpdateAvailable() to check if an update was found after calling this function.
+     */
+    Error checkForUpdate();
 
-    float getProgress() { return progress; }
+    /**
+     * @brief Starts the update process if an update is available.
+     * @return Error code indicating success or failure of starting the update process.
+     * @note This function will trigger the download and application of the update. Use getStatus() and getProgress() to monitor the update process.
+     */
+    Error startUpdate();
 
-    /// @brief INTERNAL, do not execute by hand
-    void run_update_task();
-
-    /// @brief INTERNAL, do not execute by hand
-    void run_download_firmware_task();
-    
-    /// @brief INTERNAL, do not execute by hand
-    void run_download_filesystem_task();
+    /**
+     * @brief Continues the update process if an update is pending (e.g. after a reboot).
+     * @return Error code indicating success or failure of continuing the update process.
+     * @note This function should be called only if isUpdatePending() returns true, to continue the update process after a reboot or interruption.
+     */
+    Error continueUpdate();
 
 private:
-    NVS::Handle* nvsHandle_ptr;
-
-    bool updateAvailable = false;
-    bool isFilesystemUpdatePending = false;
-    char* latestVersion = nullptr;
-    char* firmwareDownloadUrl = nullptr;
-    char* filesystemDownloadUrl = nullptr;
-
-    float progress = 0.f;
+    // For getters
+    float progress = 0.0f;
     Status status = Status::Done;
+    bool update_available = false;
+
+    // Internal state
+    std::string latest_version;
+    std::string firmware_download_url;
+    std::string filesystem_download_url;
+
+    // Internal functions
+    Error check_update();
+    Error download_firmware();
+    Error download_filesystem();
+    Error verify_firmware();
 };

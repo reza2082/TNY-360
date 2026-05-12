@@ -19,102 +19,138 @@ Error UpdateManager::init()
 {
     LOG_SCOPE(TAG, "UpdateManager::init");
 
-    // Initialize and get NVS handle
-    if (Error err = NVS::Init(); err != Error::None)
-    {
-        return err;
-    }
-    if (Error err = NVS::Open("updt_mngr", &nvsHandle_ptr); err != Error::None)
-    {
-        LOG_ERROR(TAG, "Failed to open NVS namespace: %d", static_cast<int>(err));
-        ErrorHandle(ErrorStruct::UpdateInitFailed);
-        return err;
-    }
-
     return Error::None;
 }
 
 Error UpdateManager::deinit()
 {
-    if (nvsHandle_ptr)
-    {
-        delete nvsHandle_ptr;
-        nvsHandle_ptr = nullptr;
-    }
-
-    if (latestVersion)
-    {
-        free(latestVersion);
-        latestVersion = nullptr;
-    }
-    if (firmwareDownloadUrl)
-    {
-        free(firmwareDownloadUrl);
-        firmwareDownloadUrl = nullptr;
-    }
-    if (filesystemDownloadUrl)
-    {
-        free(filesystemDownloadUrl);
-        filesystemDownloadUrl = nullptr;
-    }
     return Error::None;
 }
 
-Error UpdateManager::checkForUpdates()
+UpdateManager::Status UpdateManager::getStatus()
 {
-    TaskHandle_t task;
-    xTaskCreatePinnedToCore([](void* pvParams){
-        ((UpdateManager*) pvParams)->run_update_task();
+    return status;
+}
+
+float UpdateManager::getProgress()
+{
+    return progress;
+}
+
+std::string UpdateManager::getLatestVersion()
+{
+    return latest_version;
+}
+
+bool UpdateManager::isUpdateAvailable()
+{
+    return update_available;
+}
+
+bool UpdateManager::isUpdatePending()
+{
+    // Using ota state to determine if an update is pending
+    esp_ota_img_states_t ota_state;
+    const esp_partition_t *running_partition = esp_ota_get_running_partition();
+    
+    if (esp_err_t err = esp_ota_get_state_partition(running_partition, &ota_state); err != ESP_OK)
+    {
+        LOG_ERROR(TAG, "Failed to get OTA state for running partition");
+        return false;
+    }
+    return ota_state == ESP_OTA_IMG_PENDING_VERIFY;
+}
+
+Error UpdateManager::checkForUpdate()
+{
+    // Note : Starting in an other task to avoid blocking
+    BaseType_t ret = xTaskCreate([](void* param) {
+        UpdateManager* self = static_cast<UpdateManager*>(param);
+        // First download the firmware
+        self->check_update();
+
         vTaskDelete(nullptr);
-    }, "Update Check task", 8192, this, tskIDLE_PRIORITY + 1, &task, CORE_BRAIN);
+    }, "UpdateTask", 8192, this, tskIDLE_PRIORITY + 1, nullptr);
 
+    if (ret != pdPASS)
+    {
+        LOG_ERROR(TAG, "Failed to create update task");
+        return Error::SoftwareFailure;
+    }
     return Error::None;
 }
 
-Error UpdateManager::downloadAndApplyFirmwareUpdate()
+Error UpdateManager::startUpdate()
 {
-    if (!updateAvailable || !firmwareDownloadUrl)
+    // Note : Starting in an other task to avoid blocking
+    BaseType_t ret = xTaskCreate([](void* param) {
+        UpdateManager* self = static_cast<UpdateManager*>(param);
+        // First download the firmware
+        if (self->download_firmware() != Error::None)
+        {
+            LOG_ERROR(TAG, "Firmware update failed, aborting update process");
+            self->status = Status::ErrorFirmwareUpdateFailed;
+            vTaskDelete(nullptr);
+            return;
+        }
+        // Then download the filesystem
+        if (self->download_filesystem() != Error::None)
+        {
+            LOG_ERROR(TAG, "Filesystem update failed, aborting update process");
+            self->status = Status::ErrorFilesystemUpdateFailed;
+            vTaskDelete(nullptr);
+            return;
+        }
+        LOG_INFO(TAG, "Update process completed successfully, rebooting to apply update...");
+        // Ready to reboot
+        self->status = Status::Rebooting;
+        // Small delay to ensure message is displayed
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        esp_restart();
+        vTaskDelete(nullptr); // not needed (we reboot) but why not
+    }, "UpdateTask", 8192, this, tskIDLE_PRIORITY + 1, nullptr);
+
+    if (ret != pdPASS)
     {
-        LOG_DEBUG(TAG, "No firmware update available to download.");
+        LOG_ERROR(TAG, "Failed to create update task");
+        return Error::SoftwareFailure;
+    }
+    return Error::None;
+}
+
+Error UpdateManager::continueUpdate()
+{
+    if (!isUpdatePending())
+    {
+        LOG_ERROR(TAG, "No update is pending, cannot continue update process");
         return Error::InvalidState;
     }
 
-    TaskHandle_t task;
-    xTaskCreatePinnedToCore([](void* pvParams){
-        ((UpdateManager*) pvParams)->run_download_firmware_task();
-        vTaskDelete(nullptr);
-    }, "Firmware update task", 8192, this, tskIDLE_PRIORITY + 1, &task, CORE_BRAIN);
+    // Well ... we just need to verify if everything is working
+    if (Error err = verify_firmware(); err != Error::None)
+    {
+        LOG_ERROR(TAG, "Firmware verification failed after update");
+        esp_ota_mark_app_invalid_rollback_and_reboot();
+        return err;
+    }
 
+    // Mark the update as valid, so it won't be rolled back
+    LOG_INFO(TAG, "Firmware verification successful, marking update as valid...");
+    if (esp_err_t err = esp_ota_mark_app_valid_cancel_rollback(); err != ESP_OK)
+    {
+        LOG_ERROR(TAG, "Failed to mark updated firmware as valid: %d", err);
+        return Error::SoftwareFailure;
+    }
     return Error::None;
 }
 
-Error UpdateManager::downloadAndApplyFilesystemUpdate()
+
+/// ========== Internal functions ========== ///
+
+
+Error UpdateManager::check_update()
 {
-    filesystemDownloadUrl = new char[128];
-    sprintf(filesystemDownloadUrl, OTA_FILESYSTEM_DOWNLOAD_URL, FIRMWARE_VERSION);
-
-    TaskHandle_t task;
-    xTaskCreatePinnedToCore([](void* pvParams){
-        ((UpdateManager*) pvParams)->run_download_filesystem_task();
-        vTaskDelete(nullptr);
-    }, "Filesystem update task", 8192, this, tskIDLE_PRIORITY + 1, &task, CORE_BRAIN);
-
-    return Error::None;
-}
-
-Error UpdateManager::verifyFirmware()
-{
-    LOG_INFO(TAG, "Running firmware diagnostics...");
-
-    // TODO : Implement actual diagnostics here
-
-    LOG_INFO(TAG, "Firmware diagnostics completed successfully.");
-    return Error::None;
-}
-
-void UpdateManager::run_update_task()
-{
-    status = Status::Fetching;
+    status = Status::FetchingUpdate;
 
     LOG_DEBUG(TAG, "Contacting update server at %s", OTA_FIRMWARE_LATEST_URL);
     esp_http_client_config_t config = {};
@@ -129,200 +165,255 @@ void UpdateManager::run_update_task()
     {
         LOG_ERROR(TAG, "Failed to connect to API: %d", err);
         status = Status::ErrorUnreachable;
-        return;
+        return Error::NetworkFailure;
     }
 
     esp_http_client_fetch_headers(client);
     
     char buffer[1024];
     int read_len = esp_http_client_read(client, buffer, sizeof(buffer) - 1);
-    if (read_len > 0)
-    {
-        buffer[read_len] = 0; // Null terminate for safety
-        
-        ArduinoJson::JsonDocument json;
-        ArduinoJson::DeserializationError err = ArduinoJson::deserializeJson(json, buffer);
-        if (err != ArduinoJson::DeserializationError::Ok)
-        {
-            LOG_ERROR(TAG, "Failed to parse JSON response: %s", err.c_str());
-            status = Status::ErrorInvalidJson;
-            return;
-        }
-
-        const char *ver = json["version"];
-        const char *fw_url = json["firmwareDownloadUrl"];
-        const char *fs_url = json["filesystemDownloadUrl"];
-
-        // copy in member variables
-        latestVersion = ver && ver[0] ? strdup(ver) : nullptr;
-        firmwareDownloadUrl = fw_url && fw_url[0] ? strdup(fw_url) : nullptr;
-        filesystemDownloadUrl = fs_url && fs_url[0] ? strdup(fs_url) : nullptr;
-
-        if (ver && fw_url && fs_url)
-        {
-            LOG_DEBUG(TAG, "Comparing version strings: %s vs %s", ver, FIRMWARE_VERSION);
-            if (strcmp(ver, FIRMWARE_VERSION) != 0)
-            {
-                LOG_DEBUG(TAG, "New version found: %s", ver);
-                updateAvailable = true;
-                // NOTE : Not launching update here, just marking it as available
-                // It will be triggered by the user if desired
-            }
-            else
-            {
-                LOG_DEBUG(TAG, "System is up to date.");
-                updateAvailable = false;
-            }
-            status = Status::Done;
-        }
-        else
-        {
-            LOG_ERROR(TAG, "API response returned an invalid JSON.");
-            status = Status::ErrorInvalidJson;
-        }
-        json.clear();
-    }
-    else
+    if (read_len <= 0)
     {
         LOG_ERROR(TAG, "Failed to read response from API");
         status = Status::ErrorEmptyResponse;
+        return Error::Unknown;
     }
+    
+    buffer[read_len] = 0; // Null terminate for safety
+
+    ArduinoJson::JsonDocument json;
+    ArduinoJson::DeserializationError err = ArduinoJson::deserializeJson(json, buffer);
+    if (err != ArduinoJson::DeserializationError::Ok)
+    {
+        LOG_ERROR(TAG, "Failed to parse JSON response: %s", err.c_str());
+        status = Status::ErrorInvalidJson;
+        return Error::InvalidState;
+    }
+
+    const char *ver = json["version"];
+    const char *fw_url = json["firmwareDownloadUrl"];
+    const char *fs_url = json["filesystemDownloadUrl"];
+
+    if (!ver || !fw_url || !fs_url)
+    {
+        LOG_ERROR(TAG, "API response is missing required fields");
+        status = Status::ErrorInvalidJson;
+        return Error::Unknown;
+    }
+
+    // copy in member variables
+    latest_version = ver;
+    firmware_download_url = fw_url;
+    filesystem_download_url = fs_url;
+    
+    json.clear(); // Free JSON document memory
+
+    LOG_DEBUG(TAG, "Comparing version strings: %s vs %s", ver, FIRMWARE_VERSION);
+    if (latest_version.compare(FIRMWARE_VERSION) != 0) // if not matching, probably higher.
+    {
+        LOG_DEBUG(TAG, "New version found: %s", ver);
+        update_available = true;
+    }
+    else
+    {
+        LOG_DEBUG(TAG, "System is up to date.");
+        update_available = false;
+    }
+    status = Status::Done;
+
+    return Error::Unknown;
 }
 
-void UpdateManager::run_download_firmware_task()
+Error UpdateManager::download_firmware()
 {
-    status = Status::DownloadingFirmware;
+    if (firmware_download_url.empty())
+    {
+        LOG_ERROR(TAG, "Firmware download URL is empty");
+        return Error::InvalidState;
+    }
 
-    LOG_DEBUG(TAG, "Starting firmware update from URL: %s", firmwareDownloadUrl);
+    status = Status::DownloadingFirmware;
+    progress = 0.0f;
+
+    LOG_DEBUG(TAG, "Starting firmware update from URL: %s", firmware_download_url);
     esp_http_client_config_t config = {};
-    config.url = firmwareDownloadUrl;
+    config.url = firmware_download_url.c_str();
     config.cert_pem = (char *)root_ca_pem_start;
-    config.keep_alive_enable = true; // Keep the connection alive for large downloads
+    config.keep_alive_enable = true;
     config.timeout_ms = OTA_UPDATE_TIMEOUT_MS;
 
     esp_https_ota_config_t ota_config = {};
     ota_config.http_config = &config;
-    
-    status = Status::UpdatingFirmware;
 
-    if (esp_err_t ret = esp_https_ota(&ota_config); ret == ESP_OK)
+    // 1. Initialize OTA session
+    esp_https_ota_handle_t https_ota_handle = nullptr;
+    esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
+    if (err != ESP_OK)
     {
-        // store filesystem URL in NVS for next boot to download
-        if (Error err = nvsHandle_ptr->set("fs_updt_url", filesystemDownloadUrl); err != Error::None)
-        {
-            LOG_ERROR(TAG, "Failed to store filesystem update URL in NVS: %s", ErrorToString(err));
-            status = Status::ErrorUnknown;
-        }
-
-        status = Status::Rebooting;
-        LOG_INFO(TAG, "Firmware update applied successfully. Restarting in 3 seconds ...");
-        vTaskDelay(pdMS_TO_TICKS(3000));
-        esp_restart();
-    }
-    else
-    {
-        LOG_ERROR(TAG, "Firmware update failed: %d", ret);
+        LOG_ERROR(TAG, "ESP HTTPS OTA Begin failed: %d", err);
         status = Status::ErrorFirmwareUpdateFailed;
+        return Error::SoftwareFailure;
     }
+
+    status = Status::UpdatingFirmware;
+    LOG_INFO(TAG, "OTA session started, downloading...");
+
+    // 2. Loop for downloading and writing firmware in chunks, while updating progress
+    while (true)
+    {
+        err = esp_https_ota_perform(https_ota_handle);
+        
+        if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS)
+            break; // Download is either complete or failed
+
+        // Update progress
+        int len_read = esp_https_ota_get_image_len_read(https_ota_handle);
+        int total_len = esp_https_ota_get_image_size(https_ota_handle);
+
+        if (total_len > 0)
+        {
+            progress = static_cast<float>(len_read) / static_cast<float>(total_len);
+        }
+    }
+
+    // 3. Verify if the data is correct
+    if (esp_https_ota_is_complete_data_received(https_ota_handle) != true)
+    {
+        LOG_ERROR(TAG, "Complete data was not received.");
+        esp_https_ota_abort(https_ota_handle); // Cancel OTA session and free resources
+        status = Status::ErrorFirmwareUpdateFailed;
+        return Error::NetworkFailure;
+    }
+
+    // 4. Finishing OTA update
+    err = esp_https_ota_finish(https_ota_handle);
+    if (err != ESP_OK)
+    {
+        LOG_ERROR(TAG, "Firmware update finish failed: %d", err);
+        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
+            LOG_ERROR(TAG, "Image validation failed, image is corrupted.");
+        }
+        status = Status::ErrorFirmwareUpdateFailed;
+        return Error::SoftwareFailure;
+    }
+    
+    LOG_INFO(TAG, "Firmware update applied successfully.");
+    
+    status = Status::Done;
+    return Error::None;
 }
 
-void UpdateManager::run_download_filesystem_task()
+Error UpdateManager::download_filesystem()
 {
+    if (filesystem_download_url.empty())
+    {
+        LOG_ERROR(TAG, "Filesystem download URL is empty");
+        return Error::InvalidState;
+    }
+
     status = Status::DownloadingFilesystem;
+    progress = 0.0f;
 
-    LOG_DEBUG(TAG, "Starting filesystem update from URL: %s", filesystemDownloadUrl);
+    LOG_DEBUG(TAG, "Starting filesystem update from URL: %s", filesystem_download_url.c_str());
 
+    // 1. Find Partition
     const esp_partition_t *part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
     if (!part) {
-        LOG_ERROR(TAG, "Failed to find storage partition for filesystem update.");
+        LOG_ERROR(TAG, "Failed to find storage partition.");
         status = Status::ErrorPartitionNotFound;
+        return Error::HardwareFailure; 
     }
+    LOG_DEBUG(TAG, "Storage partition found: addr 0x%X, size %d bytes.", part->address, part->size);
 
-    LOG_DEBUG(TAG, "Found storage partition at address 0x%X, size %d bytes.", part->address, part->size);
+    // 2. Setup HTTP Client
     esp_http_client_config_t config = {};
-    config.url = filesystemDownloadUrl;
+    config.url = filesystem_download_url.c_str();
     config.cert_pem = (char *)root_ca_pem_start;
+    config.timeout_ms = OTA_UPDATE_TIMEOUT_MS;
+    
     esp_http_client_handle_t client = esp_http_client_init(&config);
-
     if (!client) {
-        LOG_ERROR(TAG, "Failed to initialize HTTP client for filesystem update.");
+        LOG_ERROR(TAG, "Failed to initialize HTTP client.");
         status = Status::ErrorHTTPClient;
+        return Error::SoftwareFailure;
     }
-    LOG_DEBUG(TAG, "HTTP client initialized for filesystem update.");
 
-    // Open HTTP connection
-    esp_err_t err = esp_http_client_open(client, 0);
-    if (err != ESP_OK) {
-        LOG_ERROR(TAG, "Failed to open HTTP connection for filesystem update: 0x%0X", err);
-        esp_http_client_cleanup(client);
+    // Auto-cleanup macro for the client (RAII-like pattern)
+    // Ensures client is cleaned up even if we return early
+    struct ClientCleaner {
+        esp_http_client_handle_t c;
+        ~ClientCleaner() { if (c) esp_http_client_cleanup(c); }
+    } cleaner{client};
+
+    // 3. Open Connection & Fetch Headers
+    if (esp_err_t err = esp_http_client_open(client, 0); err != ESP_OK) {
+        LOG_ERROR(TAG, "Failed to open HTTP connection: %d", err);
         status = Status::ErrorUnreachable;
+        return Error::NetworkFailure;
+    }
+
+    int content_len = esp_http_client_fetch_headers(client);
+    if (content_len <= 0) {
+        LOG_ERROR(TAG, "Invalid content length from server: %d", content_len);
+        status = Status::ErrorEmptyResponse;
+        return Error::NetworkFailure;
+    }
+
+    // 4. Verify Size constraints
+    if (content_len > part->size) {
+        LOG_ERROR(TAG, "Update size (%d) exceeds partition size (%d).", content_len, part->size);
+        status = Status::ErrorOutOfBounds;
+        return Error::InvalidState;
     }
     
-    LOG_DEBUG(TAG, "HTTP connection opened for filesystem update.");
-
-    // Get filesystem size
-    int content_len = esp_http_client_fetch_headers(client);
-    if (content_len > part->size) {
-        LOG_ERROR(TAG, "Filesystem update size (%d) exceeds partition size (%d).", content_len, part->size);
-        esp_http_client_cleanup(client);
-        status = Status::ErrorOutOfBounds;
-    }
-
-    LOG_DEBUG(TAG, "Filesystem update size: %d bytes.", content_len);
-
-    // Erase partition
-    err = esp_partition_erase_range(part, 0, part->size);
-    if (err != ESP_OK) {
-        LOG_ERROR(TAG, "Failed to erase storage partition: 0x%0X", err);
-        esp_http_client_cleanup(client);
+    // 5. Erase Partition
+    LOG_INFO(TAG, "Erasing storage partition (size: %d bytes)...", part->size);
+    if (esp_err_t err = esp_partition_erase_range(part, 0, part->size); err != ESP_OK) {
+        LOG_ERROR(TAG, "Failed to erase storage partition: %d", err);
         status = Status::ErrorEraseStorage;
+        return Error::HardwareFailure;
     }
 
-    LOG_DEBUG(TAG, "Storage partition erased successfully.");
-
-    // Download and write filesystem data
+    // 6. Download and Write Loop
+    status = Status::UpdatingFilesystem;
     char buffer[OTA_UPDATE_FILESYSTEM_BUFFER_SIZE];
     size_t total_read = 0;
+    esp_err_t write_err = ESP_OK;
 
-    while (true) {
-        int read = esp_http_client_read(client, buffer, OTA_UPDATE_FILESYSTEM_BUFFER_SIZE);
-        if (read < 0) {
-            LOG_ERROR(TAG, "Error reading filesystem update data from HTTP.");
-            err = ESP_FAIL;
-            break;
-        } else if (read == 0) {
-            // Download complete
-            err = ESP_OK;
-            break;
-        }
-
-        // Write to partition
-        esp_err_t write_err = esp_partition_write(part, total_read, buffer, read);
-        if (write_err != ESP_OK) {
-            LOG_ERROR(TAG, "Error writing filesystem update data to partition: %d", write_err);
-            err = write_err;
-            break;
-        }
-        total_read += read;
-        LOG_DEBUG(TAG, "Written %d/%d bytes of filesystem update (%d%%).", total_read, content_len, (total_read * 100) / content_len);
-        progress = total_read / (float) content_len;
-    }
-
-    status = Status::UpdatingFilesystem;
-
-    if (err == ESP_OK) {
-        LOG_INFO(TAG, "Filesystem update applied successfully.");
-        // Clear filesystem update URL from NVS
-        nvsHandle_ptr->erase("fs_updt_url");
-        status = Status::Rebooting;
-        LOG_INFO(TAG, "Filesystem update applied successfully. Restarting in 3 seconds ...");
-        vTaskDelay(pdMS_TO_TICKS(3000));
-        esp_restart();
-    } else {
-        LOG_ERROR(TAG, "Filesystem update failed: %d", err);
-        status = Status::ErrorFilesystemUpdateFailed;
-    }
+    LOG_INFO(TAG, "Downloading and writing filesystem...");
     
-    LOG_DEBUG(TAG, "Cleaning up HTTP client after filesystem update.");
-    esp_http_client_cleanup(client);
+    while (total_read < content_len) {
+        int read_len = esp_http_client_read(client, buffer, sizeof(buffer));
+        
+        if (read_len < 0) {
+            LOG_ERROR(TAG, "Error reading from HTTP stream.");
+            status = Status::ErrorFilesystemUpdateFailed;
+            return Error::NetworkFailure;
+        } else if (read_len == 0) {
+            LOG_WARNING(TAG, "Connection closed prematurely by server.");
+            break; 
+        }
+
+        write_err = esp_partition_write(part, total_read, buffer, read_len);
+        if (write_err != ESP_OK) {
+            LOG_ERROR(TAG, "Failed to write to partition at offset %d: %d", total_read, write_err);
+            status = Status::ErrorFilesystemUpdateFailed;
+            return Error::HardwareFailure;
+        }
+
+        total_read += read_len;
+        progress = static_cast<float>(total_read) / static_cast<float>(content_len);
+    }
+
+    // 7. Final Validation
+    if (total_read != content_len || write_err != ESP_OK) {
+        LOG_ERROR(TAG, "Filesystem update incomplete. Expected %d, got %d bytes.", content_len, total_read);
+        status = Status::ErrorFilesystemUpdateFailed;
+        return Error::SoftwareFailure;
+    }
+
+    LOG_INFO(TAG, "Filesystem update completed successfully.");
+    status = Status::Done;
+    
+    return Error::None;
 }

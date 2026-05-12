@@ -15,7 +15,8 @@ enum class Error: uint8_t {
     SoftwareFailure,   // Used when a software component fails
     Unreachable,       // Used when a target is unreachable
     OutOfBounds,       // Used when an operation goes out of defined bounds
-    OutOfMemory
+    OutOfMemory,       // Used when memory allocation fails
+    NetworkFailure     // Used when a network operation fails
 };
 
 // Helper macro to return early on error. Usage:
