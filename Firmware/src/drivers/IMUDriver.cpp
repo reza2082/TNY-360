@@ -29,6 +29,14 @@ namespace IMUDriver
             ErrorHandle(ErrorStruct::IMUInitFailed);
             return Error::HardwareFailure;
         }
+        
+        // Note : Resetting it so it's in a known state
+        if (esp_err_t err = mpu6050_reset(mpu_handle); err != ESP_OK)
+        {
+            LOG_ERROR(TAG, "Failed to reset MPU6050");
+            ErrorHandle(ErrorStruct::IMUInitFailed);
+            return Error::HardwareFailure;
+        }
 
         mpu6050_config_t mpu_config = MPU6050_DEFAULT_CONFIG();
 
