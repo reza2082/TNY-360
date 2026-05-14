@@ -19,10 +19,10 @@ Error SoundMixer::init()
     masterVolume = 0.05f; // default volume
     running = true; // start running
 
-    BaseType_t ret = xTaskCreate([](void* pvParams) {
+    BaseType_t ret = xTaskCreatePinnedToCore([](void* pvParams) {
         SoundMixer* mixer = static_cast<SoundMixer*>(pvParams);
         mixer->__internal_task(nullptr);
-    }, "SoundMixerTask", 4096, this, tskIDLE_PRIORITY + 20, nullptr); // High priority for audio task
+    }, "SoundMixerTask", 4096, this, tskIDLE_PRIORITY + 20, nullptr, CORE_BRAIN); // High priority for audio task
 
     if (ret != pdPASS)
     {

@@ -64,13 +64,13 @@ bool UpdateManager::isUpdatePending()
 Error UpdateManager::checkForUpdate()
 {
     // Note : Starting in an other task to avoid blocking
-    BaseType_t ret = xTaskCreate([](void* param) {
+    BaseType_t ret = xTaskCreatePinnedToCore([](void* param) {
         UpdateManager* self = static_cast<UpdateManager*>(param);
         // First download the firmware
         self->check_update();
 
         vTaskDelete(nullptr);
-    }, "UpdateTask", 8192, this, tskIDLE_PRIORITY + 1, nullptr);
+    }, "UpdateTask", 8192, this, tskIDLE_PRIORITY + 1, nullptr, CORE_BRAIN);
 
     if (ret != pdPASS)
     {
@@ -83,7 +83,7 @@ Error UpdateManager::checkForUpdate()
 Error UpdateManager::startUpdate()
 {
     // Note : Starting in an other task to avoid blocking
-    BaseType_t ret = xTaskCreate([](void* param) {
+    BaseType_t ret = xTaskCreatePinnedToCore([](void* param) {
         UpdateManager* self = static_cast<UpdateManager*>(param);
         // First download the firmware
         if (self->download_firmware() != Error::None)
@@ -108,7 +108,7 @@ Error UpdateManager::startUpdate()
         vTaskDelay(pdMS_TO_TICKS(1000));
         esp_restart();
         vTaskDelete(nullptr); // not needed (we reboot) but why not
-    }, "UpdateTask", 8192, this, tskIDLE_PRIORITY + 1, nullptr);
+    }, "UpdateTask", 8192, this, tskIDLE_PRIORITY + 1, nullptr, CORE_BRAIN);
 
     if (ret != pdPASS)
     {

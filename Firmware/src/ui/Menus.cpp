@@ -177,7 +177,7 @@ namespace Menus
 
         // Start update loop
         TaskHandle_t xTaskHandle = nullptr;
-        if (xTaskCreate(update_task, "updateMenu", 8192, nullptr, 1, &xTaskHandle) != pdPASS)
+        if (xTaskCreatePinnedToCore(update_task, "updateMenu", 8192, nullptr, 1, &xTaskHandle, CORE_BRAIN) != pdPASS)
         {
             ErrorHandle(ErrorStruct::MenusInitFailed);
             return Error::Unknown;

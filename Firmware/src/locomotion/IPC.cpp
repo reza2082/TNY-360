@@ -5,15 +5,21 @@
 
 namespace IPC
 {
+    // NOTE : Using DRAM_ATTR to make sure the control loop won't be blocked by cache issues when accessing the queues
+    //        (on high wifi usage or other flash access heavy operations)
+    DRAM_ATTR static uint8_t intent_queue_buffer[sizeof(ControlIntent)];
+    DRAM_ATTR static StaticQueue_t intent_queue_struct;
     QueueHandle_t intent_queue = nullptr;
+    DRAM_ATTR static uint8_t state_queue_buffer[sizeof(RobotState)];
+    DRAM_ATTR static StaticQueue_t state_queue_struct;
     QueueHandle_t state_queue = nullptr;
 
     Error Init()
     {
         LOG_SCOPE(TAG, "IPC::Init");
         
-        intent_queue = xQueueCreate(1, sizeof(ControlIntent));
-        state_queue = xQueueCreate(1, sizeof(RobotState));
+        intent_queue = xQueueCreateStatic(1, sizeof(ControlIntent), intent_queue_buffer, &intent_queue_struct);
+        state_queue = xQueueCreateStatic(1, sizeof(RobotState), state_queue_buffer, &state_queue_struct);
 
         if (intent_queue == nullptr || state_queue == nullptr)
         {

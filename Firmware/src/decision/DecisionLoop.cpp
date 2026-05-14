@@ -23,10 +23,12 @@ Error DecisionLoop::deinit()
 
 Error DecisionLoop::start()
 {
-    if (xTaskCreatePinnedToCore([](void* pvParams){
+    BaseType_t err = xTaskCreatePinnedToCore([](void* pvParams){
         DecisionLoop* decision_loop = (DecisionLoop*) pvParams;
         decision_loop->decision_loop();
-    }, "DecisionLoop_Core0", 8192, this, tskIDLE_PRIORITY + 10, &decision_loop_task, CORE_BRAIN) != pdPASS)
+    }, "DecisionLoop_Core0", 8192, this, tskIDLE_PRIORITY + 10, &decision_loop_task, CORE_BRAIN);
+
+    if (err != pdPASS)
     {
         LOG_ERROR(TAG, "Error creating DecisionLoop task");
         return Error::Unknown;

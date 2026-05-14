@@ -106,7 +106,7 @@ Error MotorController::startCalibration()
         return Error::InvalidState;
     }
 
-    if (BaseType_t err = xTaskCreate([](void* param) {
+    if (BaseType_t err = xTaskCreatePinnedToCore([](void* param) {
             // Stop the control loop and take over for the calibration
             ControlLoop& ctrl = Robot::GetInstance().getControlLoop();
             bool wasRunning = ctrl.isRunning();
@@ -152,7 +152,7 @@ Error MotorController::startCalibration()
 
             // clean up task handle
             vTaskDelete(nullptr);
-        }, "MotorCalib", 4096, this, tskIDLE_PRIORITY + 1, &calibration_task_handle); err != pdPASS)
+        }, "MotorCalib", 4096, this, tskIDLE_PRIORITY + 1, &calibration_task_handle, CORE_BRAIN); err != pdPASS)
     {
         LOG_ERROR(TAG, "Failed to create motor calibration task. Error %d", err);
         return Error::SoftwareFailure;

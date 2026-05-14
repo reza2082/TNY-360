@@ -86,7 +86,7 @@ namespace LED
 
         // launch background task for led update at fixed interval
         TaskHandle_t task_handle;
-        BaseType_t err = xTaskCreate(_update_task, "updateLEDs", 4096, nullptr, 5, &task_handle);
+        BaseType_t err = xTaskCreatePinnedToCore(_update_task, "updateLEDs", 4096, nullptr, 5, &task_handle, CORE_BRAIN);
         if (err != pdPASS) {
             LOG_ERROR(TAG, "Failed to create update task");
             return Error::Unknown;
@@ -213,7 +213,7 @@ namespace LED
     TaskHandle_t errorLoopTask = nullptr;
     void LoopErrorCode(uint8_t errCode)
     {
-        xTaskCreate([](void* pvParams){
+        xTaskCreatePinnedToCore([](void* pvParams){
             uint8_t code = *((uint8_t*) pvParams);
             // Maybe this could be in the config ?
             #define LIGHT_INTENSITY 10
@@ -242,7 +242,7 @@ namespace LED
                     vTaskDelay(pdMS_TO_TICKS(100));
                 }
             }
-        }, "LoopErrorCode", 2048, &errCode, tskIDLE_PRIORITY + 1, &errorLoopTask);
+        }, "LoopErrorCode", 2048, &errCode, tskIDLE_PRIORITY + 1, &errorLoopTask, CORE_BRAIN);
     }
 
     void clearErrorCode()

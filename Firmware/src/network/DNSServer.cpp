@@ -133,7 +133,7 @@ Error DNSServer::init()
 {
     running = true;
 
-    if (xTaskCreate(server_task, "dns_server", 4096, this, 5, &task_handle) != pdPASS)
+    if (xTaskCreatePinnedToCore(server_task, "dns_server", 4096, this, 5, &task_handle, CORE_BRAIN) != pdPASS)
     {
         LOG_ERROR(TAG, "Failed to create DNS server task");
         return Error::SoftwareFailure;

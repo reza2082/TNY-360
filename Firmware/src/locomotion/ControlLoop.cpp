@@ -11,6 +11,17 @@
 #include "drivers/MotorDriver.hpp"
 #include "drivers/IMUDriver.hpp"
 
+// Perf monitoring : Remove this when control loop is optimized and stable
+PerfMonitor perf_global;
+PerfMonitor perf_reader;
+PerfMonitor perf_imu;
+PerfMonitor perf_estimation;
+PerfMonitor perf_gait;
+PerfMonitor perf_ik;
+PerfMonitor perf_command;
+PerfMonitor perf_driver;
+uint16_t perf_counter = 0;
+
 TaskHandle_t timer_task_handle;
 bool running = false;
 
@@ -28,6 +39,9 @@ ControlLoop::ControlLoop()
 
 Error ControlLoop::init()
 {
+    // FIXME : It would really be better if we made sure everything is in DRAM
+    //         to avoid cache issues and delays in the control loop when brain core is doing heavy operations
+
     if (initialized) return Error::None;
 
     // Initialize kinematics engine with the right config
@@ -66,7 +80,7 @@ Error ControlLoop::init()
             vTaskDelete(nullptr);
             timer_task_handle = nullptr;
         }
-    },  "timer_task", 8192, this, tskIDLE_PRIORITY + 10, &timer_task_handle, CORE_REFLEX);
+    },  "timer_task", 8192, this, configMAX_PRIORITIES - 1, &timer_task_handle, CORE_REFLEX);
 
     if (err != pdPASS)
     {
@@ -181,8 +195,7 @@ Error ControlLoop::deinit()
 
 Error ControlLoop::control_task()
 {
-    // performance tracking
-    perf_controltask.start();
+    perf_global.start();
 
     static bool watchdog_active = false;
 
@@ -215,20 +228,26 @@ Error ControlLoop::control_task()
     /*** 1 - STATE ESTIMATION - READ ALL SENSORS ***/
 
     // Read the ADC channels and IMU Data
+    perf_reader.start();
     if (Error err = AnalogDriver::ReadAllChannels(); err != Error::None)
     {
         LOG_ERROR(TAG, "Error reading all ADC channels");
     }
+    perf_reader.stop();
+    perf_imu.start();
     if (Error err = IMUDriver::ReadData(); err != Error::None)
     {
         LOG_ERROR(TAG, "Error reading data from IMU");
     }
+    perf_imu.stop();
 
     // Estimate body state from new IMU and Analog data (calls Legs, Joint, IMU estimateState functions)
+    perf_estimation.start();
     if (Error err = Robot::GetInstance().getBody().estimateState(CONTROL_LOOP_DT_S); err != Error::None)
     {
         LOG_ERROR(TAG, "Error estimating body state");
     }
+    perf_estimation.stop();
 
     /// Store the state in the IPC to be read by the Brain core (we don't check return error here, no time to manage them)
     IPC::RobotState state;
@@ -270,7 +289,9 @@ Error ControlLoop::control_task()
             gait_planner.setGaitConfig(current_config);
         }
     }
+    perf_gait.start();
     gait_planner.update(CONTROL_LOOP_DT_S, cartesian_state);
+    perf_gait.stop();
 
     // Animation override (breathing and all)
     // TODO
@@ -280,6 +301,7 @@ Error ControlLoop::control_task()
     BodyJointState joint_state;
 
     // IK
+    perf_ik.start();
     if (Error err = kinematics_engine.computeBodyIK(cartesian_state, joint_state); err != Error::None)
     {
         LOG_ERROR(TAG, "KinematicsEngine failed to calculate body IK");
@@ -291,6 +313,7 @@ Error ControlLoop::control_task()
         // LOG_DEBUG(TAG, "Feet FR position = (%2.1f, %2.1f, %2.1f)", cartesian_state.legs[(int) Leg::Id::FrontRight].target_pos.x, cartesian_state.legs[(int) Leg::Id::FrontRight].target_pos.y, cartesian_state.legs[(int) Leg::Id::FrontRight].target_pos.z);
         return err;
     }
+    perf_ik.stop();
 
 
     /*** 4 - RUN JOINT CONTROL (USING BRAIN CONTROL INTENT) ***/
@@ -325,17 +348,21 @@ Error ControlLoop::control_task()
     /*** 5 - SEND EVERYTHING ***/
 
     // Update the body (this updates all joints in the body)
+    perf_command.start();
     if (Error err = Robot::GetInstance().getBody().applyCommand(joint_state, CONTROL_LOOP_DT_S); err != Error::None)
     {
         LOG_ERROR(TAG, "Failed to apply command in control task with error: %s", ErrorToString(err));
         // return err;
     }
+    perf_command.stop();
     
     // Send the new motor values
+    perf_driver.start();
     if (Error err = MotorDriver::SendData(); err != Error::None)
     {
         LOG_ERROR(TAG, "Error sending MotorDriver data");
     }
+    perf_driver.stop();
 
     /*** 6 - OTHER CORE1 JOBS ***/
 
@@ -343,13 +370,28 @@ Error ControlLoop::control_task()
     RPC::Process_Core1();
     
     // Performance tracking (as lightweight as possible)
-    perf_controltask.stop();
+    perf_global.stop();
     if (perf_counter++ == CONTROL_LOOP_FREQ_HZ)
     {
-        avg_ms = perf_controltask.get_avg_ms();
-        LOG_DEBUG(TAG, "Control loop average execution time : %.2f ms", avg_ms);
-        perf_controltask.reset();
+        float ms_global = perf_global.get_avg_ms();
+        float ms_reader = perf_reader.get_avg_ms();
+        float ms_imu = perf_imu.get_avg_ms();
+        float ms_estimation = perf_estimation.get_avg_ms();
+        float ms_gait = perf_gait.get_avg_ms();
+        float ms_ik = perf_ik.get_avg_ms();
+        float ms_command = perf_command.get_avg_ms();
+        float ms_driver = perf_driver.get_avg_ms();
+
+        LOG_DEBUG(TAG, "Control loop perfs:\n| Global | Reader |  IMU   | Estim  |  Gait  |   IK   |Command | Driver |\n|--------|--------|--------|--------|--------|--------|--------|--------|\n| %5.2f  | %5.2f  | %5.2f  | %5.2f  | %5.2f  | %5.2f  | %5.2f  | %5.2f  |\n", ms_global, ms_reader, ms_imu, ms_estimation, ms_gait, ms_ik, ms_command, ms_driver);
         perf_counter = 0;
+        perf_global.reset();
+        perf_reader.reset();
+        perf_imu.reset();
+        perf_estimation.reset();
+        perf_gait.reset();
+        perf_ik.reset();
+        perf_command.reset();
+        perf_driver.reset();
     }
 
     return Error::None;

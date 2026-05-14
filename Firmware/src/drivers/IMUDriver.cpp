@@ -39,8 +39,9 @@ namespace IMUDriver
         }
 
         mpu6050_config_t mpu_config = MPU6050_DEFAULT_CONFIG();
+        mpu_config.wake_auto = false; // We'll do that manually after configuration
 
-        if (esp_err_t err = mpu6050_config(mpu_handle, mpu_config); err != ESP_OK)
+        if (esp_err_t err = mpu6050_config(&mpu_handle, mpu_config); err != ESP_OK)
         {
             LOG_ERROR(TAG, "Failed to configure MPU6050");
             ErrorHandle(ErrorStruct::IMUInitFailed);
@@ -74,15 +75,9 @@ namespace IMUDriver
         mpu6050_accel_value_t accel;
         mpu6050_gyro_value_t gyro;
 
-        if (esp_err_t err = mpu6050_get_accel(mpu_handle, &accel); err != ESP_OK)
+        if (esp_err_t err = mpu6050_get_all(mpu_handle, &accel, &gyro, nullptr); err != ESP_OK)
         {
-            LOG_ERROR(TAG, "Failed to read accelerometer data from MPU6050");
-            return Error::HardwareFailure;
-        }
-
-        if (esp_err_t err = mpu6050_get_gyro(mpu_handle, &gyro); err != ESP_OK)
-        {
-            LOG_ERROR(TAG, "Failed to read gyroscope data from MPU6050");
+            LOG_ERROR(TAG, "Failed to read sensor data from MPU6050");
             return Error::HardwareFailure;
         }
 

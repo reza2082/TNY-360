@@ -73,7 +73,7 @@ namespace Button
             return Error::Unknown;
         }
 
-        if (xTaskCreate(update_task, "Buttons::update_task", 8192, nullptr, tskIDLE_PRIORITY + 1, nullptr) != pdPASS)
+        if (xTaskCreatePinnedToCore(update_task, "Buttons::update_task", 8192, nullptr, tskIDLE_PRIORITY + 1, nullptr, CORE_BRAIN) != pdPASS)
         {
             LOG_ERROR(TAG, "Buttons: Failed to create Buttons update task");
             ErrorHandle(ErrorStruct::ButtonsInitFailed);

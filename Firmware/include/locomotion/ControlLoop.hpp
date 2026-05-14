@@ -50,13 +50,6 @@ public:
     inline KinematicsEngine& getKinematicsEngine() { return kinematics_engine; }
 
     /**
-     * @brief Get the average time takenfor one control loop iteration (in ms)
-     * @return The time in milliseconds.
-     * @note Compare to CONTROL_LOOP_DT_MS for load estimation
-     */
-    inline float getAvgTimeMs() { return avg_ms; }
-
-    /**
      * @brief Internal Task for Control loop at 50 Hz.
      * @return Error code indicating success or failure.
      */
@@ -68,8 +61,4 @@ private:
 
     GaitPlanner gait_planner;
     KinematicsEngine kinematics_engine;
-
-    PerfMonitor perf_controltask;
-    uint16_t perf_counter = 0;
-    float avg_ms;
 };
