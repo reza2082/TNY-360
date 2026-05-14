@@ -4,6 +4,7 @@
 #include "ui/menus/Info.hpp"
 #include "ui/menus/Logs.hpp"
 #include "ui/menus/Update.hpp"
+#include "ui/menus/Reboot.hpp"
 #include "ui/menus/Reset.hpp"
 
 class MenuSystem : public MenuList
@@ -17,5 +18,6 @@ private:
     MenuInfo menuInfo;
     MenuLogs menuLogs;
     MenuUpdate menuUpdate;
+    MenuReboot menuReboot;
     MenuReset menuReset;
 };
