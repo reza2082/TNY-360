@@ -19,7 +19,7 @@ To learn how to fully assemble you TNY-360, check out the [TNY-360 Documentation
 | Speaker   | 2W 8Ω Speaker (25mm x 35mm)      |    1     | Head         | [Click here](https://fr.aliexpress.com/item/1005008626624201.html) \[5PCS 8Ω 2W\] |
 |           |                                  |          |              |                                                                                   |
 | SG90      | 0.9kg.cm servomotor              |    2     | Head         | [Click here](https://s.click.aliexpress.com/e/_c4PiVQKP) \[180°\]                 |
-| MG996R    | 12kg.cm servomotor               |    12    | Torso / Legs | [Click here](https://s.click.aliexpress.com/e/_c37d8WVN) \[MG996R/180°\]          |
+| MG996R    | 12kg.cm servomotor               |    12    | Torso / Legs | [Click here](https://s.click.aliexpress.com/e/_c3QXPU2f) \[180°\]                 |
 |           |                                  |          |              |                                                                                   |
 | MPU6050   | 6 axis accelerometer & gyroscope |    1     | Torso Center | [Click here](https://s.click.aliexpress.com/e/_c4LXGDrH)                          |
 | Switches  | Tactile switches 6x6x5 mm        |    4     | Feet         | [Click here](https://s.click.aliexpress.com/e/_c4koO1EL) \[6x6x5mm\]              |
