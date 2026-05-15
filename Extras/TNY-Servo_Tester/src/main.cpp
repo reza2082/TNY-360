@@ -1,5 +1,6 @@
 #include <freertos/FreeRTOS.h>
 #include <esp_log.h>
+#include <cmath>
 #include "LED.hpp"
 #include "pwm.hpp"
 #include "adc.hpp"

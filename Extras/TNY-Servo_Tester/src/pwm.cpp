@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "driver/ledc.h"
 #include "esp_err.h"
+#include "driver/gpio.h"
 
 namespace PWM
 {
@@ -28,14 +29,20 @@ namespace PWM
         timer_cfg.clk_cfg = LEDC_AUTO_CLK;
         ledc_timer_config(&timer_cfg);
 
-        ledc_channel_config_t ch_cfg = {};
-        ch_cfg.gpio_num = PWM_PIN;
-        ch_cfg.speed_mode = LEDC_MODE;
-        ch_cfg.channel = LEDC_CHANNEL;
-        ch_cfg.intr_type = LEDC_INTR_DISABLE;
-        ch_cfg.timer_sel = LEDC_TIMER;
-        ch_cfg.duty = 0;
-        ch_cfg.hpoint = 0;
+        ledc_channel_config_t ch_cfg = {
+            .gpio_num = PWM_PIN,
+            .speed_mode = LEDC_MODE,
+            .channel = LEDC_CHANNEL,
+            .intr_type = LEDC_INTR_DISABLE,
+            .timer_sel = LEDC_TIMER,
+            .duty = 0,
+            .hpoint = 0,
+            .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+            .flags = {
+                .output_invert = false
+            },
+            .deconfigure = false
+        };
         ledc_channel_config(&ch_cfg);
     }
 
