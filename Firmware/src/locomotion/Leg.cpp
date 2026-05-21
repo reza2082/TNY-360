@@ -51,7 +51,7 @@ Error Leg::estimateState(float dt)
     {
         return err;
     }
-    grounded = voltage > LEG_GROUNDED_THRESHOLD_MV;
+    grounded = voltage < LEG_GROUNDED_THRESHOLD_V;
 
     // pass the call to all motors
     for (int i = 0; i < (int)JointId::Count; i++)

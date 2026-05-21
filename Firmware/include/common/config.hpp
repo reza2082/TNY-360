@@ -107,7 +107,7 @@ constexpr gpio_num_t SCANNER_SLCT_PIN4 = GPIO_NUM_42;
 
 /** LEG **/
 // Voltage threshold at which the leg is considered as grounded (touching ground)
-constexpr int LEG_GROUNDED_THRESHOLD_MV = 3300 / 2;
+constexpr float LEG_GROUNDED_THRESHOLD_V = 2.0f;
 
 
 /** IMU **/
